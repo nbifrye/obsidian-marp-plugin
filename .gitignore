@@ -20,3 +20,7 @@ data.json
 
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
+
+# Test downloads and output
+.obsidian-cache
+test-results

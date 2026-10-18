@@ -1,0 +1,114 @@
+name: E2E tests
+
+on:
+    push:
+        branches: ['main']
+    pull_request:
+        branches: ['**']
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    desktop:
+        name: Desktop (${{ matrix.os }}, ${{ matrix.obsidian }})
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, macos-latest, windows-latest]
+                # app/installer pairs; see test/wdio.base.mts. 1.0.3 is the oldest
+                # version wdio-obsidian-service can run (minAppVersion is 1.0.0).
+                obsidian: ['latest/latest', '1.0.3/earliest']
+        runs-on: ${{ matrix.os }}
+        defaults:
+            run:
+                shell: bash
+        steps:
+            - uses: actions/checkout@v6
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24.x
+                  cache: 'npm'
+            - run: npm ci
+
+            - name: Cache Obsidian downloads
+              uses: actions/cache@v6
+              with:
+                  path: .obsidian-cache
+                  key: obsidian-${{ runner.os }}-${{ matrix.obsidian }}-${{ github.run_id }}
+                  restore-keys: obsidian-${{ runner.os }}-${{ matrix.obsidian }}-
+
+            # Obsidian needs a display and a window manager on Linux.
+            - name: Set up virtual display
+              if: runner.os == 'Linux'
+              run: |
+                  sudo apt-get update -q
+                  sudo apt-get install -q -y xvfb herbstluftwm
+                  echo "DISPLAY=:99" >> "$GITHUB_ENV"
+                  Xvfb :99 -screen 0 1280x1024x24 +extension GLX -noreset &
+                  sleep 1
+                  DISPLAY=:99 herbstluftwm &
+                  sleep 1
+
+            - run: npm run test:e2e
+              env:
+                  OBSIDIAN_VERSIONS: ${{ matrix.obsidian }}
+                  E2E_MAX_INSTANCES: 2
+
+            - name: Upload screenshots and logs
+              if: failure()
+              uses: actions/upload-artifact@v7
+              with:
+                  name: e2e-desktop-${{ matrix.os }}-${{ strategy.job-index }}
+                  path: test-results/
+
+    android:
+        name: Android (${{ matrix.obsidian }})
+        strategy:
+            fail-fast: false
+            matrix:
+                obsidian: ['latest']
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24.x
+                  cache: 'npm'
+            - run: npm ci
+
+            - name: Cache Obsidian downloads
+              uses: actions/cache@v6
+              with:
+                  path: .obsidian-cache
+                  key: obsidian-android-${{ matrix.obsidian }}-${{ github.run_id }}
+                  restore-keys: obsidian-android-${{ matrix.obsidian }}-
+
+            - name: Enable KVM
+              run: |
+                  echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+                  sudo udevadm control --reload-rules
+                  sudo udevadm trigger --name-match=kvm
+
+            - name: Run tests on an Android emulator
+              uses: reactivecircus/android-emulator-runner@v2
+              with:
+                  avd-name: obsidian_test
+                  api-level: 36
+                  arch: x86_64
+                  target: google_apis
+                  profile: pixel
+                  disk-size: 4096M
+                  heap-size: 512M
+                  emulator-options: -no-snapshot -no-metrics -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+                  script: npm run test:e2e:android
+              env:
+                  OBSIDIAN_VERSIONS: ${{ matrix.obsidian }}
+
+            - name: Upload screenshots and logs
+              if: failure()
+              uses: actions/upload-artifact@v7
+              with:
+                  name: e2e-android-${{ strategy.job-index }}
+                  path: test-results/

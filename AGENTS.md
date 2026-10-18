@@ -79,7 +79,50 @@ npm run build
 
 ## Testing
 
-- Manual install for testing: copy `main.js`, `manifest.json`, `styles.css` (if any) to:
+Verify every behavior change yourself with the layers below; never ask the user to check in Obsidian. None of them touch the user's own Obsidian install, config or vaults: Obsidian is downloaded into `.obsidian-cache/` and runs with a sandboxed config dir against a temporary copy of `test/vaults/simple/`.
+
+| Layer                   | Command                                                 | What it covers                                                                                                                                  |
+| ----------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit                    | `npm test`                                              | Pure logic with Vitest. `obsidian` is replaced by `test/mocks/obsidian.ts`; extend the mock as needed.                                          |
+| Types                   | `npm run typecheck`                                     | `src/` plus tests and test configs.                                                                                                             |
+| E2E desktop + mobile UI | `npm run test:e2e`                                      | Real Obsidian through WebdriverIO + `wdio-obsidian-service`, once with the desktop UI and once with Obsidian's mobile emulation (phone UI).     |
+| E2E Android             | `npm run test:e2e:android`                              | The real Obsidian Android app in an emulator via Appium. Needs the Android SDK and an AVD named `obsidian_test` (or `ANDROID_AVD`). Runs in CI. |
+| Interactive             | `npm run obsidian:launch` + `npm run obsidian:cdp -- …` | Drive a running Obsidian by hand to explore or debug.                                                                                           |
+
+### E2E tests
+
+- Specs live in `test/e2e/*.e2e.ts`. Use `browser.executeObsidian(({ app, obsidian, plugins }) => …)` to reach the app; `plugins.samplePlugin` is this plugin, typed in `test/e2e/types.d.ts`.
+- Reset state with `resetVault()` from `test/e2e/helpers.ts`, **not** `obsidianPage.resetVault()`: the latter deletes `.obsidian` in wdio-obsidian-service 3.3.0.
+- Desktop Obsidian 1.14+ opens settings in a popout window; see `openPluginSettings()` in the spec for switching windows.
+- Environment variables:
+    - `OBSIDIAN_VERSIONS` — `app/installer` pairs, e.g. `"latest/latest 1.0.3/earliest"` (default `latest/latest`). `earliest` = `minAppVersion`; 1.0.3 is the oldest version the tooling supports.
+    - `E2E_TARGETS` — `desktop`, `mobile` or both (default `desktop,mobile`).
+    - `E2E_MAX_INSTANCES` — parallel Obsidian instances (default 4).
+- Run a subset: `npx wdio run test/wdio.conf.mts --spec test/e2e/plugin.e2e.ts --mochaOpts.grep "settings"` (build first with `npm run build`).
+- Failing tests save a screenshot to `test-results/screenshots/`; read it to see what went wrong. Logs are in `test-results/logs/`.
+- The Obsidian UI follows the OS language, so select elements by CSS class or attributes rather than visible UI text.
+
+### Interactive debugging
+
+1. `npm run obsidian:launch` (run in the background) builds the plugin and starts a sandboxed Obsidian with the Chrome DevTools Protocol on a free port (`OBSIDIAN_DEBUG_PORT` to fix one). Wait for `Obsidian ready`: it is printed after the plugin's `onload()` has finished; the process exits non-zero instead if that takes over 2 minutes. `OBSIDIAN_VERSION`, `OBSIDIAN_INSTALLER` and `OBSIDIAN_VAULT` pick the version and vault. Several sessions can run at once.
+2. Drive it with `node scripts/obsidian-cdp.mjs [--session <pid>] <command>` (`--session` is needed only when several sessions run). It only uses windows of a session recorded in `.obsidian-cache/sessions/`: the window showing that session's temporary vault and popouts opened from it, never another Obsidian or another vault.
+    - `eval "<expr>"` — evaluate JS (awaited, `app` is global) and print JSON.
+    - `command <id>` — run a command, e.g. `sample-plugin:open-modal-simple`.
+    - `screenshot [file]` — save a PNG (default `test-results/screenshots/cdp-*.png`), then read it.
+    - `reload` — after `npm run build`, copy the build into the vault and re-enable the plugin; returns after `onload()` finished and fails if it threw.
+    - `logs [seconds]` — stream console output and exceptions.
+    - Each command fails (non-zero exit) after 60 seconds, plus the watch time for `logs`.
+    - `targets` / `--window <text>` — list the session's windows and pick one (e.g. the settings popout); the default is the vault window.
+3. Stop the launch process when done (Ctrl+C or SIGTERM). It closes Obsidian, forcing it after 5 seconds, and deletes the temporary vault, config dir and session record; it does the same when Obsidian crashes or startup fails, and exits non-zero on any failure, including a cleanup that failed. Files the launcher creates before Obsidian starts, or anything left after the launch process itself is killed with SIGKILL, are not covered.
+
+### Platform coverage
+
+- CI (`.github/workflows/e2e.yml`): desktop on Linux, macOS and Windows for the latest version and 1.0.3, each with desktop and mobile-emulated UI; the Android app on an emulator.
+- iOS is not covered automatically: Obsidian's iOS app is only distributed through the App Store and cannot be installed in the iOS Simulator. Mobile emulation and Android cover the shared mobile code paths (`Platform.isMobile`, no Node/Electron APIs), but not iOS-only branches (`Platform.isIosApp`) or WebKit rendering. Mobile emulation still runs in Electron, so only Android proves the absence of Node/Electron APIs. Checking on a physical iOS device (Safari Web Inspector) requires the user.
+
+### Manual install
+
+- Copy `main.js`, `manifest.json`, `styles.css` (if any) to:
     ```
     <Vault>/.obsidian/plugins/<plugin-id>/
     ```

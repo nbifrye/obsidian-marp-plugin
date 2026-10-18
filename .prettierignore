@@ -2,3 +2,5 @@ node_modules
 main.js
 *.map
 package-lock.json
+.obsidian-cache
+test-results
