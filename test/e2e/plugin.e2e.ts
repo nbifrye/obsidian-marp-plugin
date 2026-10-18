@@ -3,7 +3,7 @@ import { obsidianPage } from 'wdio-obsidian-service';
 import type { MarpPluginSettings } from '../../src/settings';
 import { resetVault } from './helpers';
 
-const PLUGIN_ID = 'sample-plugin';
+const PLUGIN_ID = 'marp-deck';
 const VIEW_TYPE = 'marp-core-slides-preview';
 
 type PluginManager = {
@@ -205,8 +205,8 @@ async function menuItems(
 
 async function setSettings(values: Partial<MarpPluginSettings>): Promise<void> {
 	await browser.executeObsidian(async ({ plugins }, values) => {
-		Object.assign(plugins.samplePlugin.settings, values);
-		await plugins.samplePlugin.saveSettings();
+		Object.assign(plugins.marpDeck.settings, values);
+		await plugins.marpDeck.saveSettings();
 	}, values);
 }
 
@@ -254,7 +254,7 @@ describe('Marp plugin', function () {
 
 	before(async function () {
 		defaults = await browser.executeObsidian(({ plugins }) =>
-			structuredClone(plugins.samplePlugin.settings),
+			structuredClone(plugins.marpDeck.settings),
 		);
 	});
 
@@ -683,7 +683,7 @@ describe('Marp plugin', function () {
 		await browser.waitUntil(async () => {
 			const saved = await browser.executeObsidian(
 				async ({ plugins }) =>
-					(await plugins.samplePlugin.loadData()) as Partial<MarpPluginSettings> | null,
+					(await plugins.marpDeck.loadData()) as Partial<MarpPluginSettings> | null,
 			);
 			return saved?.math === 'katex';
 		});

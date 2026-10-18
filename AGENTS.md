@@ -91,7 +91,7 @@ Verify every behavior change yourself with the layers below; never ask the user 
 
 ### E2E tests
 
-- Specs live in `test/e2e/*.e2e.ts`. Use `browser.executeObsidian(({ app, obsidian, plugins }) => …)` to reach the app; `plugins.samplePlugin` is this plugin, typed in `test/e2e/types.d.ts`.
+- Specs live in `test/e2e/*.e2e.ts`. Use `browser.executeObsidian(({ app, obsidian, plugins }) => …)` to reach the app; `plugins.marpDeck` is this plugin, typed in `test/e2e/types.d.ts`.
 - Reset state with `resetVault()` from `test/e2e/helpers.ts`, **not** `obsidianPage.resetVault()`: the latter deletes `.obsidian` in wdio-obsidian-service 3.3.0.
 - Desktop Obsidian 1.14+ opens settings in a popout window; see `openPluginSettings()` in the spec for switching windows.
 - Environment variables:
@@ -107,7 +107,7 @@ Verify every behavior change yourself with the layers below; never ask the user 
 1. `npm run obsidian:launch` (run in the background) builds the plugin and starts a sandboxed Obsidian with the Chrome DevTools Protocol on a free port (`OBSIDIAN_DEBUG_PORT` to fix one). Wait for `Obsidian ready`: it is printed after the plugin's `onload()` has finished; the process exits non-zero instead if that takes over 2 minutes. `OBSIDIAN_VERSION`, `OBSIDIAN_INSTALLER` and `OBSIDIAN_VAULT` pick the version and vault. Several sessions can run at once.
 2. Drive it with `node scripts/obsidian-cdp.mjs [--session <pid>] <command>` (`--session` is needed only when several sessions run). It only uses windows of a session recorded in `.obsidian-cache/sessions/`: the window showing that session's temporary vault and popouts opened from it, never another Obsidian or another vault.
     - `eval "<expr>"` — evaluate JS (awaited, `app` is global) and print JSON.
-    - `command <id>` — run a command, e.g. `sample-plugin:open-preview`.
+    - `command <id>` — run a command, e.g. `marp-deck:open-preview`.
     - `screenshot [file]` — save a PNG (default `test-results/screenshots/cdp-*.png`), then read it.
     - `reload` — after `npm run build`, copy the build into the vault and re-enable the plugin; returns after `onload()` finished and fails if it threw.
     - `logs [seconds]` — stream console output and exceptions.
