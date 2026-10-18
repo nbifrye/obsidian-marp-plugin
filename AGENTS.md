@@ -140,6 +140,7 @@ Verify every behavior change yourself with the layers below; never ask the user 
 - Bump `version` in `manifest.json` (SemVer) and update `versions.json` to map plugin version → minimum app version.
 - Create a GitHub release whose tag exactly matches `manifest.json`'s `version`. Do not use a leading `v`.
 - Attach `manifest.json`, `main.js`, and `styles.css` (if present) to the release as individual assets.
+- Beta releases for [BRAT](https://tfthacker.com/BRAT): push a pre-release tag such as `0.2.0-beta.1`. The release workflow publishes it as a pre-release and writes the tag's version into the attached `manifest.json`. See **Releasing** in `README.md`.
 - After the initial release, follow the process to add/update your plugin in the community catalog as required.
 
 ## Security, privacy, and compliance
