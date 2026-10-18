@@ -47,3 +47,35 @@ export class Modal {
 export class Setting {}
 export class Notice {}
 export class MarkdownView {}
+
+import { parse } from 'yaml';
+
+export function parseYaml(yaml: string): unknown {
+	return parse(yaml);
+}
+
+export class Events {
+	private handlers = new Map<string, ((...args: unknown[]) => void)[]>();
+	on(name: string, callback: (...args: unknown[]) => void) {
+		this.handlers.set(name, [...(this.handlers.get(name) ?? []), callback]);
+		return { name, callback };
+	}
+	trigger(name: string, ...args: unknown[]) {
+		for (const callback of this.handlers.get(name) ?? []) callback(...args);
+	}
+}
+
+export class ItemView {}
+export class TAbstractFile {}
+export class TFile extends TAbstractFile {}
+export class WorkspaceLeaf {}
+export const Platform = { isMobile: false, isDesktopApp: true };
+export function setIcon() {}
+
+export function normalizePath(path: string): string {
+	return path.replace(/[\\/]+/g, '/').replace(/^\/|\/$/g, '') || '/';
+}
+
+export function arrayBufferToBase64(buffer: ArrayBuffer): string {
+	return Buffer.from(buffer).toString('base64');
+}

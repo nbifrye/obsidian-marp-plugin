@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { App } from 'obsidian';
 import MarpPlugin from '../../src/main';
-import { DEFAULT_SETTINGS } from '../../src/settings';
+import { DEFAULT_SETTINGS, normalizeSettings } from '../../src/settings';
 
 function createPlugin(): MarpPlugin {
 	return new MarpPlugin(new App(), {} as never);
@@ -14,21 +14,48 @@ describe('settings', () => {
 		expect(plugin.settings).toEqual(DEFAULT_SETTINGS);
 	});
 
-	it('keeps stored values over defaults', async () => {
-		const plugin = createPlugin();
-		await plugin.saveData({ mySetting: 'stored' });
-		await plugin.loadSettings();
-		expect(plugin.settings.mySetting).toBe('stored');
+	it('defaults to MathJax, the HTML allowlist and loading external resources', () => {
+		expect(DEFAULT_SETTINGS).toEqual({
+			math: 'mathjax',
+			html: 'allowlist',
+			themeFolder: '',
+			blockExternalResources: false,
+		});
+	});
+
+	it('keeps valid stored values and drops invalid ones', () => {
+		expect(
+			normalizeSettings({
+				math: 'katex',
+				html: 'nonsense',
+				themeFolder: 'Themes',
+				blockExternalResources: 'yes',
+				mySetting: 'old',
+			}),
+		).toEqual({
+			...DEFAULT_SETTINGS,
+			math: 'katex',
+			themeFolder: 'Themes',
+		});
 	});
 
 	it('round-trips through saveSettings', async () => {
 		const plugin = createPlugin();
 		await plugin.loadSettings();
-		plugin.settings.mySetting = 'changed';
+		plugin.settings.html = 'off';
 		await plugin.saveSettings();
-		plugin.settings.mySetting = 'unsaved';
+		plugin.settings.html = 'all';
 
 		await plugin.loadSettings();
-		expect(plugin.settings.mySetting).toBe('changed');
+		expect(plugin.settings.html).toBe('off');
+	});
+
+	it('notifies open previews when settings are saved', async () => {
+		const plugin = createPlugin();
+		await plugin.loadSettings();
+		let refreshed = 0;
+		plugin.events.on('refresh', () => refreshed++);
+		await plugin.saveSettings();
+		expect(refreshed).toBe(1);
 	});
 });

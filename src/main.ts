@@ -1,107 +1,77 @@
+import { Events, Plugin, TAbstractFile } from 'obsidian';
+import { openPreview, targetFile } from './actions';
+import { registerCommands } from './commands';
+import { buildCsp } from './render/csp';
+import { EngineStore } from './render/engine-store';
+import { vaultResourceOrigin } from './render/resources';
+import { isThemeFile } from './render/themes';
 import {
-	Editor,
-	MarkdownView,
-	MarkdownFileInfo,
-	Modal,
-	Notice,
-	Plugin,
-} from 'obsidian';
-import {
-	DEFAULT_SETTINGS,
 	MarpPluginSettings,
 	MarpSettingTab,
+	normalizeSettings,
 } from './settings';
+import { PREVIEW_VIEW_TYPE, PreviewView } from './ui/preview-view';
 
 export default class MarpPlugin extends Plugin {
 	settings!: MarpPluginSettings;
+	/** Triggers `refresh` when previews must render again from scratch. */
+	readonly events = new Events();
+	readonly engines = new EngineStore(this);
 
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		this.registerView(
+			PREVIEW_VIEW_TYPE,
+			(leaf) => new PreviewView(leaf, this),
+		);
+		this.addRibbonIcon('presentation', 'Open slide preview', () => {
+			void openPreview(this, targetFile(this));
 		});
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new MarpModal(this.app).open();
-			},
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (
-				editor: Editor,
-				_ctx: MarkdownView | MarkdownFileInfo,
-			) => {
-				editor.replaceSelection('Sample editor command');
-			},
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new MarpModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
-			},
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
+		registerCommands(this);
 		this.addSettingTab(new MarpSettingTab(this.app, this));
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
-			new Notice('Click');
-		});
+		const onThemeChange = (file: TAbstractFile, oldPath?: string) => {
+			const folder = this.settings.themeFolder;
+			if (
+				isThemeFile(file.path, folder) ||
+				(oldPath !== undefined && isThemeFile(oldPath, folder))
+			) {
+				this.refresh();
+			}
+		};
+		this.registerEvent(
+			this.app.vault.on('create', (f) => onThemeChange(f)),
+		);
+		this.registerEvent(
+			this.app.vault.on('modify', (f) => onThemeChange(f)),
+		);
+		this.registerEvent(
+			this.app.vault.on('delete', (f) => onThemeChange(f)),
+		);
+		this.registerEvent(this.app.vault.on('rename', onThemeChange));
 	}
 
-	onunload() {}
-
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<MarpPluginSettings>,
-		);
+		this.settings = normalizeSettings(await this.loadData());
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-	}
-}
-
-class MarpModal extends Modal {
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.setText('Woah!');
+		this.refresh();
 	}
 
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
+	/** Rebuilds the engine and re-renders open previews. */
+	refresh(): void {
+		this.engines.invalidate();
+		this.events.trigger('refresh');
+	}
+
+	/** CSP for documents that show slides inside the app. */
+	csp(): string {
+		return buildCsp({
+			blockExternalResources: this.settings.blockExternalResources,
+			resourceOrigin: vaultResourceOrigin(this.app),
+		});
 	}
 }
