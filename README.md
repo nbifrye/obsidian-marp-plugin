@@ -52,6 +52,15 @@ Quick starting guide for new plugin devs:
 - `npm i` to install dependencies.
 - `npm run dev` to start compilation in watch mode.
 
+## Testing
+
+- `npm test` runs the unit tests (Vitest).
+- `npm run test:e2e` runs the end-to-end tests in a real, sandboxed Obsidian (downloaded into `.obsidian-cache/`) with both the desktop and the mobile UI. Your own Obsidian installation and vaults are not touched.
+- `npm run test:e2e:android` runs them in the Obsidian Android app on an emulator (requires the Android SDK and an AVD named `obsidian_test`).
+- CI runs the end-to-end tests on Linux, macOS, Windows and Android.
+
+See the Testing section of [AGENTS.md](AGENTS.md) for options and interactive debugging.
+
 ## Manually installing the plugin
 
 - Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
