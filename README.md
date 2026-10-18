@@ -48,7 +48,7 @@ Quick starting guide for new plugin devs:
 ## How to use
 
 - Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
+- Make sure your NodeJS is at least v22 (`node --version`).
 - `npm i` to install dependencies.
 - `npm run dev` to start compilation in watch mode.
 
