@@ -8,14 +8,12 @@ import {
 } from 'obsidian';
 import {
 	DEFAULT_SETTINGS,
-	MyPluginSettings,
-	SampleSettingTab,
+	MarpPluginSettings,
+	MarpSettingTab,
 } from './settings';
 
-// Remember to rename these classes and interfaces!
-
-export default class MyPlugin extends Plugin {
-	settings!: MyPluginSettings;
+export default class MarpPlugin extends Plugin {
+	settings!: MarpPluginSettings;
 
 	async onload() {
 		await this.loadSettings();
@@ -35,7 +33,7 @@ export default class MyPlugin extends Plugin {
 			id: 'open-modal-simple',
 			name: 'Open modal (simple)',
 			callback: () => {
-				new SampleModal(this.app).open();
+				new MarpModal(this.app).open();
 			},
 		});
 		// This adds an editor command that can perform some operation on the current editor instance
@@ -61,7 +59,7 @@ export default class MyPlugin extends Plugin {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
 					if (!checking) {
-						new SampleModal(this.app).open();
+						new MarpModal(this.app).open();
 					}
 
 					// This command will only show up in Command Palette when the check function returns true
@@ -72,7 +70,7 @@ export default class MyPlugin extends Plugin {
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new MarpSettingTab(this.app, this));
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
@@ -87,7 +85,7 @@ export default class MyPlugin extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<MyPluginSettings>,
+			(await this.loadData()) as Partial<MarpPluginSettings>,
 		);
 	}
 
@@ -96,7 +94,7 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
+class MarpModal extends Modal {
 	onOpen() {
 		const { contentEl } = this;
 		contentEl.setText('Woah!');

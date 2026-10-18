@@ -1,18 +1,18 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import MyPlugin from './main';
+import MarpPlugin from './main';
 
-export interface MyPluginSettings {
+export interface MarpPluginSettings {
 	mySetting: string;
 }
 
-export const DEFAULT_SETTINGS: MyPluginSettings = {
+export const DEFAULT_SETTINGS: MarpPluginSettings = {
 	mySetting: 'default',
 };
 
-export class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+export class MarpSettingTab extends PluginSettingTab {
+	plugin: MarpPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: MarpPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
