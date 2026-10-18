@@ -1,5 +1,6 @@
 // Creates a vault for trying the plugin by hand, e.g. on a phone or tablet:
-// a copy of test/vaults/manual with the built plugin installed and enabled.
+// a copy of test/vaults/manual with the built plugin installed and enabled,
+// plus Hot Reload, which reloads the plugin when `npm run dev` rebuilds it.
 //
 // Usage: node scripts/sample-vault.mjs [--reset] [dir]   (default: sample-vault)
 //
@@ -8,6 +9,7 @@
 // it only deletes a folder this script created.
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { installHotReload } from './lib/hot-reload.mjs';
 import { copyPlugin, pluginId, root } from './lib/session.mjs';
 
 const source = path.join(root, 'test', 'vaults', 'manual');
@@ -42,6 +44,7 @@ if (await exists(dir)) {
 		process.exit(1);
 	}
 	await copyPlugin(pluginDir);
+	await installHotReload(configDir, pluginDir);
 	console.log(`Updated the plugin in ${dir}`);
 } else {
 	await fs.cp(source, dir, { recursive: true });
@@ -55,5 +58,6 @@ if (await exists(dir)) {
 		path.join(pluginDir, 'data.json'),
 		JSON.stringify({ themeFolder: 'themes' }, null, '\t'),
 	);
+	await installHotReload(configDir, pluginDir);
 	console.log(`Created ${dir}`);
 }

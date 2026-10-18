@@ -1,4 +1,6 @@
 import esbuild from 'esbuild';
+import { existsSync } from 'node:fs';
+import * as path from 'node:path';
 import process from 'process';
 import {
 	assetQueryPlugin,
@@ -12,6 +14,28 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = process.argv[2] === 'production';
+
+// In watch mode, copy each build into a vault's plugin folder, where Hot
+// Reload picks it up: `npm run dev -- <vault>`, or sample-vault/ if it exists.
+const vault = prod ? undefined : (process.argv[2] ?? 'sample-vault');
+const plugins = [assetQueryPlugin];
+if (vault && existsSync(path.join(vault, '.obsidian'))) {
+	const { copyPlugin, pluginId } = await import('./scripts/lib/session.mjs');
+	const pluginDir = path.join(vault, '.obsidian', 'plugins', pluginId);
+	plugins.push({
+		name: 'copy-to-vault',
+		setup(build) {
+			build.onEnd(async (result) => {
+				if (result.errors.length > 0) return;
+				await copyPlugin(pluginDir);
+				console.log(`Copied the plugin to ${pluginDir}`);
+			});
+		},
+	});
+} else if (process.argv[2] && !prod) {
+	console.error(`${vault} is not a vault: it has no .obsidian folder`);
+	process.exit(1);
+}
 
 const context = await esbuild.context({
 	banner: {
@@ -39,7 +63,7 @@ const context = await esbuild.context({
 	// Marp Core picks Node-only internals through the "node" export condition,
 	// so build for the browser to get the implementations that run on mobile.
 	platform: 'browser',
-	plugins: [assetQueryPlugin],
+	plugins,
 	format: 'cjs',
 	target: 'es2021',
 	logLevel: 'info',
