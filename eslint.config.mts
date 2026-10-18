@@ -16,6 +16,7 @@ export default defineConfig(
 		'tsconfig.json',
 		'test/tsconfig.json',
 		'test/vaults',
+		'sample-vault',
 		'test-results',
 		'.obsidian-cache',
 	]),

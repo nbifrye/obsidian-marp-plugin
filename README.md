@@ -83,6 +83,8 @@ npm test           # unit tests
 npm run test:e2e   # end-to-end tests in a sandboxed Obsidian
 ```
 
+To try the plugin by hand, for example on a phone or tablet, run `npm run sample-vault`. It creates `sample-vault/`: a vault with notes covering each feature (see `00 Start here.md` for a checklist) and the built plugin installed and enabled. Copy the folder to the device, or create it directly in a synced folder with `npm run sample-vault -- <path>`, e.g. `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Marp sample` for Obsidian on iOS through iCloud. Running it again updates only the plugin files; `--reset` recreates the vault.
+
 ## License
 
 The plugin is licensed under 0-BSD. It bundles Marp Core (MIT), Shiki (MIT), beautiful-mermaid (MIT), KaTeX and its fonts (MIT), and MathJax (Apache-2.0).
