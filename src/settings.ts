@@ -1,4 +1,9 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import {
+	App,
+	PluginSettingTab,
+	Setting,
+	SettingDefinitionItem,
+} from 'obsidian';
 import MarpPlugin from './main';
 
 export interface MarpPluginSettings {
@@ -17,6 +22,22 @@ export class MarpSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				name: 'Settings #1',
+				desc: "It's a secret",
+				control: {
+					type: 'text',
+					key: 'mySetting',
+					placeholder: 'Enter your secret',
+					defaultValue: DEFAULT_SETTINGS.mySetting,
+				},
+			},
+		];
+	}
+
+	// Fallback for Obsidian versions older than 1.13.0
 	display(): void {
 		const { containerEl } = this;
 
