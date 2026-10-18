@@ -10,6 +10,7 @@ import {
 	MarpSettingTab,
 	normalizeSettings,
 } from './settings';
+import { registerFileMenu } from './ui/menus';
 import { PREVIEW_VIEW_TYPE, PreviewView } from './ui/preview-view';
 
 export default class MarpPlugin extends Plugin {
@@ -29,6 +30,7 @@ export default class MarpPlugin extends Plugin {
 			void openPreview(this, targetFile(this));
 		});
 		registerCommands(this);
+		registerFileMenu(this);
 		this.addSettingTab(new MarpSettingTab(this.app, this));
 
 		const onThemeChange = (file: TAbstractFile, oldPath?: string) => {

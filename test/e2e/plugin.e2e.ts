@@ -112,6 +112,97 @@ async function inFrame<T>(body: string): Promise<T> {
 	`) as Promise<T>;
 }
 
+/**
+ * Runs the plugin's ribbon action, or just counts them when `run` is false.
+ * The ribbon has a (possibly hidden) button per action, except in the phone
+ * UI of older versions, which only list them in a menu built from
+ * `leftRibbon.orderedRibbonActions`.
+ */
+async function ribbonAction(title: string, run: boolean): Promise<number> {
+	return browser.executeObsidian(
+		({ app }, title, run) => {
+			const buttons = [
+				...document.querySelectorAll<HTMLElement>(
+					'.side-dock-ribbon-action',
+				),
+			]
+				.filter((el) => el.getAttribute('aria-label') === title)
+				.map((el) => () => el.click());
+			const { leftRibbon } = app.workspace as unknown as {
+				leftRibbon: {
+					orderedRibbonActions?: {
+						title: string;
+						callback: () => void;
+					}[];
+				};
+			};
+			const actions = buttons.length
+				? buttons
+				: (leftRibbon.orderedRibbonActions ?? [])
+						.filter((a) => a.title === title)
+						.map((a) => () => a.callback());
+			if (run) actions[0]?.();
+			return actions.length;
+		},
+		title,
+		run,
+	);
+}
+
+/**
+ * Titles of the items a menu event adds, and clicks the one named `click`.
+ * Uses a stand-in menu so the check does not depend on Obsidian's menu DOM.
+ */
+async function menuItems(
+	target: 'file' | 'preview',
+	path: string,
+	click?: string,
+): Promise<string[]> {
+	return browser.executeObsidian(
+		({ app }, target, path, click, type) => {
+			const titles: string[] = [];
+			const actions = new Map<string, () => void>();
+			const menu = {
+				addSeparator: () => menu,
+				addItem(cb: (item: unknown) => void) {
+					let title = '';
+					const item = {
+						setTitle: (t: string) => ((title = t), item),
+						setIcon: () => item,
+						setSection: () => item,
+						setChecked: () => item,
+						setDisabled: () => item,
+						setWarning: () => item,
+						onClick: (f: () => void) => (
+							actions.set(title, f),
+							item
+						),
+					};
+					cb(item);
+					titles.push(title);
+					return menu;
+				},
+			};
+			if (target === 'file') {
+				const file = app.vault.getAbstractFileByPath(path);
+				app.workspace.trigger('file-menu', menu, file, 'more-options');
+			} else {
+				const view = app.workspace.getLeavesOfType(type)[0]!
+					.view as unknown as {
+					onPaneMenu(menu: unknown, source: string): void;
+				};
+				view.onPaneMenu(menu, 'more-options');
+			}
+			if (click) actions.get(click)?.();
+			return titles;
+		},
+		target,
+		path,
+		click,
+		VIEW_TYPE,
+	);
+}
+
 async function setSettings(values: Partial<MarpPluginSettings>): Promise<void> {
 	await browser.executeObsidian(async ({ plugins }, values) => {
 		Object.assign(plugins.samplePlugin.settings, values);
@@ -352,6 +443,68 @@ describe('Marp plugin', function () {
 		await expect(browser.$('.marp-core-slides-presentation')).not.toExist();
 	});
 
+	it('opens the preview from the ribbon', async function () {
+		expect(await ribbonAction('Open slide preview', true)).toBe(1);
+		expect((await previewInfo()).file).toBe('Slides.md');
+	});
+
+	it('offers the slide actions in the file menu of Marp notes', async function () {
+		const desktop = await browser.executeObsidian(
+			({ obsidian }) => obsidian.Platform.isDesktopApp,
+		);
+		const items = await menuItems('file', 'Slides.md');
+		expect(items).toEqual(
+			expect.arrayContaining([
+				'Open slide preview',
+				'Start presentation',
+				'Export as HTML',
+			]),
+		);
+		expect(items.includes('Print slides')).toBe(desktop);
+		expect(await menuItems('file', 'Welcome.md')).not.toContain(
+			'Start presentation',
+		);
+
+		await menuItems('file', 'Slides.md', 'Start presentation');
+		await expect(browser.$('.marp-core-slides-counter')).toHaveText(
+			'1 / 4',
+		);
+		await browser.keys('Escape');
+		await expect(browser.$('.marp-core-slides-presentation')).not.toExist();
+
+		await menuItems('file', 'Slides.md', 'Open slide preview');
+		expect((await previewInfo()).file).toBe('Slides.md');
+	});
+
+	it('offers the slide actions in the preview header and menu', async function () {
+		await writeNote('Slides.md', longDeck(10));
+		await openPreview();
+		await previewInfo();
+		const items = await menuItems('preview', '');
+		expect(items).toEqual(
+			expect.arrayContaining(['Start presentation', 'Export as HTML']),
+		);
+		expect(items).not.toContain('Open slide preview');
+
+		await scrollToSlide(4);
+		await browser.waitUntil(async () => (await currentSlide()) === 4);
+		await menuItems('preview', '', 'Start presentation');
+		await expect(browser.$('.marp-core-slides-counter')).toHaveText(
+			'5 / 10',
+		);
+		await browser.keys('Escape');
+		await expect(browser.$('.marp-core-slides-presentation')).not.toExist();
+
+		await browser
+			.$(
+				`.workspace-leaf-content[data-type="${VIEW_TYPE}"] .view-action[aria-label="Start presentation"]`,
+			)
+			.click();
+		await expect(browser.$('.marp-core-slides-counter')).toHaveText(
+			'5 / 10',
+		);
+	});
+
 	it('exports a self-contained HTML file', async function () {
 		await browser.executeObsidianCommand(`${PLUGIN_ID}:export-html`);
 		const html = (await browser.waitUntil(() =>
@@ -569,10 +722,6 @@ describe('Marp plugin', function () {
 
 		expect(state.disabled).toEqual({ commands: 0, frames: 0 });
 		expect(state.enabled).toEqual({ commands: 4 });
-		await expect(
-			browser.$$(
-				'.side-dock-ribbon-action[aria-label="Open slide preview"]',
-			),
-		).toBeElementsArrayOfSize(1);
+		expect(await ribbonAction('Open slide preview', false)).toBe(1);
 	});
 });

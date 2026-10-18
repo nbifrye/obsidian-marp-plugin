@@ -1,6 +1,7 @@
 import {
 	ItemView,
 	MarkdownView,
+	Menu,
 	TAbstractFile,
 	TFile,
 	WorkspaceLeaf,
@@ -12,6 +13,7 @@ import { isMarpDocument } from '../render/frontmatter';
 import { imageExtensions } from '../render/obsidian-images';
 import { previewResolvers, readNoteSource } from '../render/note';
 import { openSlideLink } from './links';
+import { addSlideMenuItems } from './menus';
 import { SlideFrame } from './slide-frame';
 
 export const PREVIEW_VIEW_TYPE = 'marp-core-slides-preview';
@@ -69,12 +71,13 @@ export class PreviewView extends ItemView {
 			cls: 'marp-core-slides-frame-container',
 		});
 
-		this.headerAction('presentation', 'Start presentation', () => {
+		this.headerAction('play', 'Start presentation', () => {
 			if (this.file) {
-				const start = this.positionKnown
-					? (this.frame?.visibleSlide() ?? 0)
-					: 0;
-				void startPresentation(this.plugin, this.file, start);
+				void startPresentation(
+					this.plugin,
+					this.file,
+					this.visibleSlide(),
+				);
 			}
 		});
 		this.headerAction('download', 'Export as HTML', () => {
@@ -145,6 +148,22 @@ export class PreviewView extends ItemView {
 			) => void;
 		};
 		view.addAction?.(icon, title, callback);
+	}
+
+	/** Adds the slide actions to the "More options" and tab header menus. */
+	onPaneMenu(menu: Menu, source: string): void {
+		super.onPaneMenu(menu, source);
+		if (this.file) {
+			addSlideMenuItems(menu, this.plugin, this.file, {
+				preview: false,
+				start: () => this.visibleSlide(),
+			});
+		}
+	}
+
+	/** The slide in view, or 0 while the frame shows something else. */
+	private visibleSlide(): number {
+		return this.positionKnown ? (this.frame?.visibleSlide() ?? 0) : 0;
 	}
 
 	getState(): Record<string, unknown> {
