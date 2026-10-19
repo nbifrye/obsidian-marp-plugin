@@ -74,9 +74,25 @@ export function findVaultFile(
 	return app.metadataCache.getFirstLinkpathDest(path, sourcePath);
 }
 
+/**
+ * MIME type of a media file (image, font, video or audio) that may be
+ * embedded in exported slides; undefined for any other file, such as notes.
+ */
+export function mediaMimeType(file: TFile): string | undefined {
+	const extension = file.extension.toLowerCase();
+	return Object.prototype.hasOwnProperty.call(mimeTypes, extension)
+		? mimeTypes[extension]
+		: undefined;
+}
+
+/**
+ * Reads a media file as a data URL. Other files are refused, so that a note
+ * referring to e.g. another note as an image cannot embed its text.
+ */
 export async function readAsDataUrl(app: App, file: TFile): Promise<string> {
-	const mime =
-		mimeTypes[file.extension.toLowerCase()] ?? 'application/octet-stream';
+	const mime = mediaMimeType(file);
+	if (!mime)
+		throw new Error(`${file.path} is not an image, font or media file`);
 	const data = await app.vault.readBinary(file);
 	return `data:${mime};base64,${arrayBufferToBase64(data)}`;
 }

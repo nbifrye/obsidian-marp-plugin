@@ -106,7 +106,7 @@ export async function exportHtml(
 
 	try {
 		const { buildStandaloneHtml } = await import('./export/html');
-		const { html, missing } = await buildStandaloneHtml(
+		const { html, missing, skipped } = await buildStandaloneHtml(
 			app,
 			plugin.settings,
 			file,
@@ -115,9 +115,15 @@ export async function exportHtml(
 		const saved = existing
 			? (await app.vault.modify(existing, html), existing)
 			: await app.vault.create(path, html);
+		const problems = [
+			missing.length &&
+				`these files were not found: ${missing.join(', ')}`,
+			skipped.length &&
+				`these files are not images or media and were left out: ${skipped.join(', ')}`,
+		].filter(Boolean);
 		new Notice(
-			missing.length
-				? `Exported to ${path}, but these files were not found: ${missing.join(', ')}`
+			problems.length
+				? `Exported to ${path}, but ${problems.join('; ')}`
 				: `Exported to ${path}`,
 		);
 		return saved;

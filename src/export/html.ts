@@ -2,7 +2,11 @@ import { App, TFile } from 'obsidian';
 import browserScript from '@marp-team/marp-core/lib/browser-iife.iife.js?raw';
 import type { MarpPluginSettings } from '../settings';
 import { buildCsp, sha256Base64 } from '../render/csp';
-import { findVaultFile, readAsDataUrl } from '../render/resources';
+import {
+	findVaultFile,
+	mediaMimeType,
+	readAsDataUrl,
+} from '../render/resources';
 import {
 	mediaUrls,
 	parseHtml,
@@ -15,6 +19,8 @@ export interface ExportResult {
 	html: string;
 	/** Vault URLs that could not be found, so they are missing from the file. */
 	missing: string[];
+	/** Vault URLs of files that are not media (e.g. notes), left out. */
+	skipped: string[];
 }
 
 // Shows one slide at a time; arrow keys, clicks and #<n> move between slides.
@@ -47,6 +53,7 @@ function escapeStyle(css: string): string {
 /**
  * Renders a note to a self-contained HTML presentation. Vault images, theme
  * assets and KaTeX fonts are embedded as data URLs; external URLs are kept.
+ * Vault files that are not media are never embedded.
  */
 export async function buildStandaloneHtml(
 	app: App,
@@ -58,10 +65,14 @@ export async function buildStandaloneHtml(
 	const themes = await readThemeSources(app, settings.themeFolder);
 	const files = new Map<string, TFile>();
 	const missing = new Set<string>();
+	const skipped = new Set<string>();
 	const collect = (url: string, from: string, kind?: 'link' | 'embed') => {
 		const found = findVaultFile(app, url, from, kind);
-		if (found) files.set(found.path, found);
-		else missing.add(url);
+		if (!found) missing.add(url);
+		// Only media is embedded: anything else (such as a private note
+		// referred to as an image) would leak its contents into the file.
+		else if (!mediaMimeType(found)) skipped.add(url);
+		else files.set(found.path, found);
 		return undefined;
 	};
 
@@ -125,5 +136,5 @@ ${container.innerHTML}
 </body>
 </html>
 `;
-	return { html, missing: [...missing] };
+	return { html, missing: [...missing], skipped: [...skipped] };
 }
