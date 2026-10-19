@@ -79,6 +79,8 @@ The plugin itself makes no network requests and sends no data anywhere. KaTeX fo
 
 Slides do load the **external resources a note or theme refers to**, such as `https://` images or web fonts imported by a theme (the built-in `gaia` and `uncover` themes import Google Fonts). Loading them sends your IP address to those servers. Turn on **Block external resources** to prevent this. Exported HTML files keep such URLs as they are, so they need a network connection to show them.
 
+HTML export embeds only images, fonts, audio and video from the vault. Other files a note refers to, such as another note written as an image, are left out and listed in the export notice, so their contents never end up in the file.
+
 Slides are shown in a sandboxed frame with a strict Content Security Policy: scripts, forms, frames and plugins in notes never run, and links open outside the slides.
 
 ## Platform support
