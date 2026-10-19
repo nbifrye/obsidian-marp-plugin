@@ -1,14 +1,19 @@
-# Marp plugin for Obsidian
+# Marp Deck
 
-Preview, present and export [Marp](https://marp.app/) slide decks in [Obsidian](https://obsidian.md), powered by **Marp Core v5**.
+**Write slides in Markdown, preview them as you type, and present them — without leaving [Obsidian](https://obsidian.md).**
 
-All of Marp Core's plugins are built in and always enabled:
+Marp Deck turns any note with `marp: true` into a [Marp](https://marp.app/) slide deck, powered by **Marp Core v5**. It works offline on desktop and mobile.
 
-- **Math** with MathJax (default) or KaTeX. A note's `math` directive overrides the setting.
-- **Syntax highlighting** with Shiki.
-- **Mermaid diagrams** (rendered by beautiful-mermaid; unsupported diagrams fall back to a code block).
+![Editing a note updates the slide preview live; switching the theme and starting a presentation](docs/images/demo.gif)
 
-Works on desktop (Windows, macOS, Linux) and mobile. It uses no Node.js or Electron APIs.
+## Features
+
+- **Live preview** next to the note, updated as you type (unsaved changes included).
+- **Presentation mode** in a full window, with keyboard and tap navigation.
+- **HTML export** to a single self-contained file, and **printing** to PDF on desktop.
+- **Math** with MathJax or KaTeX, **syntax highlighting** with Shiki, and **Mermaid diagrams** — all built in, no setup.
+- **Obsidian-style images** (`![[image.png|300]]`) and **custom themes** from a vault folder.
+- **Desktop and mobile**: no Node.js or Electron APIs, no network requests of its own.
 
 ## Install
 
@@ -49,7 +54,11 @@ $e^{i\pi} + 1 = 0$
 | **Export as HTML**     | Saves `<note>.html` next to the note: a single file with images, themes and fonts embedded.                  |
 | **Print slides**       | Opens the system print dialog, e.g. to save a PDF (desktop only).                                            |
 
+The **Open slide preview** icon in the ribbon opens the preview too, and the buttons in the preview's header start the presentation or export HTML.
+
 Images can be written as Markdown images (relative to the note, or to the vault root with a leading `/`), as Obsidian embeds (`![[image.png]]`, `![[image.png|300]]`, `![[image.png|300x200]]`, `![[image.png|bg left]]`), or as Marp backgrounds (`![bg](image.png)`).
+
+Mermaid diagrams are rendered by beautiful-mermaid; diagram types it does not support are shown as a code block.
 
 PDF and PowerPoint export are not built in: Marp CLI needs Node.js and a browser, which are not available on mobile. Use **Print slides** on desktop to get a PDF.
 
