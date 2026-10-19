@@ -11,15 +11,22 @@ on:
         tags:
             - '*'
 
+# Third-party code (npm packages) runs only in the build job, which cannot
+# write to the repository; the publish job only uploads what it built.
+permissions: {}
+
 jobs:
     build:
         runs-on: ubuntu-latest
         permissions:
-            contents: write
-            id-token: write
-            attestations: write
+            contents: read
+        outputs:
+            tag: ${{ steps.tag.outputs.name }}
+            prerelease: ${{ steps.tag.outputs.prerelease }}
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+              with:
+                  persist-credentials: false
 
             - name: Check tag
               id: tag
@@ -42,7 +49,7 @@ jobs:
                   echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
             - name: Use Node.js
-              uses: actions/setup-node@v6
+              uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
               with:
                   node-version: 24
                   cache: 'npm'
@@ -61,23 +68,48 @@ jobs:
                   jq --tab --arg v "$TAG" '.version = $v' manifest.json > manifest.tmp
                   mv manifest.tmp manifest.json
 
+            - name: Collect release files
+              run: |
+                  mkdir release
+                  cp main.js manifest.json release/
+                  if [ -f styles.css ]; then cp styles.css release/; fi
+
+            - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: release
+                  path: release/
+                  if-no-files-found: error
+
+    publish:
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            id-token: write
+            attestations: write
+        steps:
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+              with:
+                  name: release
+                  path: release
+
             - name: Check for optional styles
               id: styles
               run: |
-                  [ -f styles.css ] && echo "exists=true" >> "$GITHUB_OUTPUT" || echo "exists=false" >> "$GITHUB_OUTPUT"
+                  [ -f release/styles.css ] && echo "exists=true" >> "$GITHUB_OUTPUT" || echo "exists=false" >> "$GITHUB_OUTPUT"
 
             - name: Attest build provenance
-              uses: actions/attest@v4
+              uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
               with:
                   subject-path: |
-                      main.js
-                      ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}
+                      release/main.js
+                      ${{ steps.styles.outputs.exists == 'true' && 'release/styles.css' || '' }}
 
             - name: Create release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  TAG: ${{ steps.tag.outputs.name }}
-                  PRERELEASE: ${{ steps.tag.outputs.prerelease }}
+                  TAG: ${{ needs.build.outputs.tag }}
+                  PRERELEASE: ${{ needs.build.outputs.prerelease }}
               run: |
                   if [ "$PRERELEASE" = true ]; then
                     mode=(--prerelease --notes "Beta release for testing with BRAT.")
@@ -86,7 +118,8 @@ jobs:
                   fi
 
                   gh release create "$TAG" \
+                    --repo "$GITHUB_REPOSITORY" \
                     --title="$TAG" \
                     --verify-tag \
                     "${mode[@]}" \
-                    main.js manifest.json ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}
+                    release/*
