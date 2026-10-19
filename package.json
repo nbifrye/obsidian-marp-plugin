@@ -1,6 +1,6 @@
 {
 	"name": "marp-deck",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Preview, present and export Marp slide decks in Obsidian with Marp Core v5.",
 	"main": "main.js",
 	"type": "module",
