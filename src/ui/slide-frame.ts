@@ -49,9 +49,12 @@ function escapeAttribute(value: string): string {
 		.replace(/</g, '&lt;');
 }
 
-/** The HTML or SVG link (`<a>`) an event happened in, if any. */
-function linkOf(target: EventTarget | null): Element | null {
-	return (target as Element | null)?.closest?.('a') ?? null;
+/**
+ * The link an event happened in, if any: an HTML or SVG `<a>`, or an image
+ * map's `<area>`.
+ */
+export function linkOf(target: EventTarget | null): Element | null {
+	return (target as Element | null)?.closest?.('a, area') ?? null;
 }
 
 const xlinkNamespace = 'http://www.w3.org/1999/xlink';
