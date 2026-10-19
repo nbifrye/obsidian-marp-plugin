@@ -115,4 +115,4 @@ Releases are built by `.github/workflows/release.yml` when a tag is pushed. Tags
 
 ## License
 
-The plugin is licensed under 0-BSD. It bundles Marp Core (MIT), Shiki (MIT), beautiful-mermaid (MIT), KaTeX and its fonts (MIT), and MathJax (Apache-2.0).
+The plugin is licensed under MIT. It bundles Marp Core (MIT), Shiki (MIT), beautiful-mermaid (MIT), KaTeX and its fonts (MIT), and MathJax (Apache-2.0).

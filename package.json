@@ -21,7 +21,7 @@
 		"sample-vault": "npm run build && node scripts/sample-vault.mjs"
 	},
 	"keywords": [],
-	"license": "0-BSD",
+	"license": "MIT",
 	"devDependencies": {
 		"@eslint/js": "^9.39.5",
 		"@types/mocha": "^10.0.10",
