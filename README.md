@@ -1,101 +1,118 @@
-# Obsidian Sample Plugin
+# Marp Deck
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+**Write slides in Markdown, preview them as you type, and present them — without leaving [Obsidian](https://obsidian.md).**
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+Marp Deck turns any note with `marp: true` into a [Marp](https://marp.app/) slide deck, powered by **Marp Core v5**. It works offline on desktop and mobile.
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+![Editing a note updates the slide preview live; switching the theme and starting a presentation](docs/images/demo.gif)
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+## Features
 
-## First time developing plugins?
+- **Live preview** next to the note, updated as you type (unsaved changes included).
+- **Presentation mode** in a full window, with keyboard and tap navigation.
+- **HTML export** to a single self-contained file, and **printing** to PDF on desktop.
+- **Math** with MathJax or KaTeX, **syntax highlighting** with Shiki, and **Mermaid diagrams** — all built in, no setup.
+- **Obsidian-style images** (`![[image.png|300]]`) and **custom themes** from a vault folder.
+- **Desktop and mobile**: no Node.js or Electron APIs, no network requests of its own.
 
-Quick starting guide for new plugin devs:
+## Install
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+The plugin is not in the community catalog yet. To try a beta release, use [BRAT](https://tfthacker.com/BRAT):
 
-## Releasing new releases
+1. Install and enable **BRAT** from **Settings → Community plugins**.
+2. Run the command **BRAT: Add a beta plugin for testing**.
+3. Enter `nbifrye/obsidian-marp-plugin` and select **Add plugin**.
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+BRAT installs the newest release or pre-release and updates it when a newer one is published.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+## Usage
 
-## Adding your plugin to the community plugin list
+Add `marp: true` to a note's properties:
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+```markdown
+---
+marp: true
+theme: default
+paginate: true
+---
 
-## How to use
+# First slide
 
-- Clone this repo.
-- Make sure your NodeJS is at least v22 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+$e^{i\pi} + 1 = 0$
 
-## Testing
+---
 
-- `npm test` runs the unit tests (Vitest).
-- `npm run test:e2e` runs the end-to-end tests in a real, sandboxed Obsidian (downloaded into `.obsidian-cache/`) with both the desktop and the mobile UI. Your own Obsidian installation and vaults are not touched.
-- `npm run test:e2e:android` runs them in the Obsidian Android app on an emulator (requires the Android SDK and an AVD named `obsidian_test`).
-- CI runs the end-to-end tests on Linux, macOS, Windows and Android.
+## Second slide
 
-See the Testing section of [AGENTS.md](AGENTS.md) for options and interactive debugging.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint
-
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
+![[diagram.png|400]]
 ```
 
-If you have multiple URLs, you can also do:
+| Command                | What it does                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Open slide preview** | Opens a live preview that follows the active note, including unsaved changes.                                |
+| **Start presentation** | Shows the slides full window. Use the arrow keys, Page Up/Down, Space, Home/End, or tap the left/right half. |
+| **Export as HTML**     | Saves `<note>.html` next to the note: a single file with images, themes and fonts embedded.                  |
+| **Print slides**       | Opens the system print dialog, e.g. to save a PDF (desktop only).                                            |
 
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
+The **Open slide preview** icon in the ribbon opens the preview too, and the buttons in the preview's header start the presentation or export HTML.
+
+Images can be written as Markdown images (relative to the note, or to the vault root with a leading `/`), as Obsidian embeds (`![[image.png]]`, `![[image.png|300]]`, `![[image.png|300x200]]`, `![[image.png|bg left]]`), or as Marp backgrounds (`![bg](image.png)`).
+
+Mermaid diagrams are rendered by beautiful-mermaid; diagram types it does not support are shown as a code block.
+
+PDF and PowerPoint export are not built in: Marp CLI needs Node.js and a browser, which are not available on mobile. Use **Print slides** on desktop to get a PDF.
+
+## Settings
+
+| Setting                      | Default            | Description                                                                                          |
+| ---------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
+| **Math engine**              | MathJax            | Used when a note does not set the `math` directive.                                                  |
+| **HTML in Markdown**         | Safe elements only | Off, safe elements only (Marp Core's allowlist), or all elements. JavaScript never runs in any mode. |
+| **Theme folder**             | (none)             | Vault folder whose CSS files are registered as custom themes (`/* @theme name */`).                  |
+| **Block external resources** | Off                | Blocks images, fonts and styles from the internet.                                                   |
+
+Custom themes may refer to images and fonts in the vault with relative `url()`s. `@import` of other CSS files in the vault is not supported; `@import` of built-in themes (`@import "default";`) and of web URLs is.
+
+## Privacy and network use
+
+The plugin itself makes no network requests and sends no data anywhere. KaTeX fonts are bundled, emoji are shown as Unicode characters (not Twemoji images from a CDN), and MathJax renders to SVG.
+
+Slides do load the **external resources a note or theme refers to**, such as `https://` images or web fonts imported by a theme (the built-in `gaia` and `uncover` themes import Google Fonts). Loading them sends your IP address to those servers. Turn on **Block external resources** to prevent this. Exported HTML files keep such URLs as they are, so they need a network connection to show them.
+
+Slides are shown in a sandboxed frame with a strict Content Security Policy: scripts, forms, frames and plugins in notes never run, and links open outside the slides.
+
+## Platform support
+
+| Platform              | Status                                                     |
+| --------------------- | ---------------------------------------------------------- |
+| Windows, macOS, Linux | Tested automatically (latest Obsidian and 1.0.3).          |
+| Android               | Tested automatically in an emulator.                       |
+| iOS / iPadOS          | Intended to work, but not tested on a device or in WebKit. |
+
+The plugin bundles Marp Core with all of its optional dependencies, so `main.js` is about 13 MB. The renderer is loaded the first time slides are shown, not at startup.
+
+## Development
+
+See [AGENTS.md](AGENTS.md) for the build and test setup.
+
+```bash
+npm install
+npm run dev        # watch build
+npm test           # unit tests
+npm run test:e2e   # end-to-end tests in a sandboxed Obsidian
 ```
 
-## API Documentation
+To try the plugin by hand, for example on a phone or tablet, run `npm run sample-vault`. It creates `sample-vault/`: a vault with notes covering each feature (see `00 Start here.md` for a checklist) and the built plugin installed and enabled. Copy the folder to the device, or create it directly in a synced folder with `npm run sample-vault -- <path>`, e.g. `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Marp sample` for Obsidian on iOS through iCloud. Running it again updates only the plugin files; `--reset` recreates the vault.
 
-See https://docs.obsidian.md
+The sample vault also has [Hot Reload](https://github.com/pjeby/hot-reload) installed and enabled (downloaded once from its GitHub release, pinned and checked by hash). While `npm run dev` is running, each build is copied into `sample-vault/`, and Obsidian reloads the plugin without a restart. Pass another vault to copy there instead, e.g. `npm run dev -- <path>`; create it with `npm run sample-vault -- <path>` to have Hot Reload installed too.
+
+### Releasing
+
+Releases are built by `.github/workflows/release.yml` when a tag is pushed. Tags have no leading `v`.
+
+- **Beta** (for BRAT): tag any commit with a pre-release version, e.g. `git tag 0.2.0-beta.1 && git push origin 0.2.0-beta.1`. A pre-release is published right away; the `manifest.json` attached to it has the tag's version, so the committed one stays unchanged.
+- **Stable**: run `npm version <x.y.z>` (updates `manifest.json` and `versions.json`), push the commit and tag, then publish the draft release the workflow creates.
+
+## License
+
+The plugin is licensed under 0-BSD. It bundles Marp Core (MIT), Shiki (MIT), beautiful-mermaid (MIT), KaTeX and its fonts (MIT), and MathJax (Apache-2.0).

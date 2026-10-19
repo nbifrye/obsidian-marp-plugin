@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
-	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"name": "marp-deck",
+	"version": "0.1.0",
+	"description": "Preview, present and export Marp slide decks in Obsidian with Marp Core v5.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
@@ -17,7 +17,8 @@
 		"test:e2e": "npm run build && wdio run test/wdio.conf.mts",
 		"test:e2e:android": "npm run build && wdio run test/wdio.android.conf.mts",
 		"obsidian:launch": "npm run build && node scripts/obsidian-launch.mjs",
-		"obsidian:cdp": "node scripts/obsidian-cdp.mjs"
+		"obsidian:cdp": "node scripts/obsidian-cdp.mjs",
+		"sample-vault": "npm run build && node scripts/sample-vault.mjs"
 	},
 	"keywords": [],
 	"license": "0-BSD",
@@ -38,6 +39,7 @@
 		"eslint": "^9.39.5",
 		"eslint-plugin-obsidianmd": "^0.4.2",
 		"globals": "^17.13.0",
+		"happy-dom": "^21.0.3",
 		"jiti": "^2.7.0",
 		"mocha": "^12.0.3",
 		"obsidian": "latest",
@@ -48,6 +50,19 @@
 		"vitest": "^5.0.5",
 		"wdio-obsidian-reporter": "^3.3.0",
 		"wdio-obsidian-service": "^3.3.0",
-		"webdriverio": "^9.32.0"
+		"webdriverio": "^9.32.0",
+		"yaml": "^2.9.1"
+	},
+	"dependencies": {
+		"@marp-team/marp-core": "^5.0.2",
+		"@marp-team/marpit": "^3.2.3",
+		"@mathjax/mathjax-bbm-font-extension": "^4.1.3",
+		"@mathjax/mathjax-bboldx-font-extension": "^4.1.3",
+		"@mathjax/mathjax-dsfont-font-extension": "^4.1.3",
+		"@mathjax/mathjax-mhchem-font-extension": "^4.1.3",
+		"@mathjax/src": "^4.1.3",
+		"beautiful-mermaid": "^1.1.3",
+		"katex": "^0.18.10",
+		"shiki": "^4.5.0"
 	}
 }

@@ -1,5 +1,11 @@
 name: Release Obsidian plugin
 
+# A tag `x.y.z` creates a draft release; publish it by hand. Its version must
+# match manifest.json.
+# A tag `x.y.z-<pre>` (e.g. `0.2.0-beta.1`) publishes a pre-release right away
+# so BRAT (https://tfthacker.com/BRAT) users can install it. The manifest.json
+# attached to it carries the tag's version; the committed one is not changed.
+
 on:
     push:
         tags:
@@ -15,6 +21,26 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
+            - name: Check tag
+              id: tag
+              run: |
+                  tag="${GITHUB_REF#refs/tags/}"
+                  if ! [[ "$tag" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$ ]]; then
+                    echo "::error::Tag '$tag' is not a version like 1.2.3 or 1.2.3-beta.1 (no leading v)."
+                    exit 1
+                  fi
+                  manifest_version="$(jq -r .version manifest.json)"
+                  if [[ "$tag" == *-* ]]; then
+                    prerelease=true
+                  elif [ "$tag" != "$manifest_version" ]; then
+                    echo "::error::Tag '$tag' does not match manifest.json version '$manifest_version'."
+                    exit 1
+                  else
+                    prerelease=false
+                  fi
+                  echo "name=$tag" >> "$GITHUB_OUTPUT"
+                  echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
             - name: Use Node.js
               uses: actions/setup-node@v6
               with:
@@ -25,6 +51,15 @@ jobs:
               run: |
                   npm ci
                   npm run build
+                  npm test
+
+            - name: Set pre-release version in manifest.json
+              if: steps.tag.outputs.prerelease == 'true'
+              env:
+                  TAG: ${{ steps.tag.outputs.name }}
+              run: |
+                  jq --tab --arg v "$TAG" '.version = $v' manifest.json > manifest.tmp
+                  mv manifest.tmp manifest.json
 
             - name: Check for optional styles
               id: styles
@@ -41,10 +76,17 @@ jobs:
             - name: Create release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAG: ${{ steps.tag.outputs.name }}
+                  PRERELEASE: ${{ steps.tag.outputs.prerelease }}
               run: |
-                  tag="${GITHUB_REF#refs/tags/}"
+                  if [ "$PRERELEASE" = true ]; then
+                    mode=(--prerelease --notes "Beta release for testing with BRAT.")
+                  else
+                    mode=(--draft --generate-notes)
+                  fi
 
-                  gh release create "$tag" \
-                    --title="$tag" \
-                    --draft \
+                  gh release create "$TAG" \
+                    --title="$TAG" \
+                    --verify-tag \
+                    "${mode[@]}" \
                     main.js manifest.json ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}

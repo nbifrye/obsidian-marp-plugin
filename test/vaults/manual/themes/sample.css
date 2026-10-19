@@ -1,0 +1,20 @@
+/* @theme sample */
+
+@import 'default';
+
+section {
+	background-image: url('stripe.svg');
+	background-size: 40px 40px;
+	color: #78350f;
+}
+
+section h1,
+section h2 {
+	color: #b45309;
+	border-bottom: 4px solid #f59e0b;
+}
+
+section.lead {
+	text-align: center;
+	justify-content: center;
+}

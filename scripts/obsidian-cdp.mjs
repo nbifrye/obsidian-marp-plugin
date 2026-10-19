@@ -5,7 +5,7 @@
 //   targets                 list the session's windows (the settings window is a popout on desktop)
 //   eval <expression>       evaluate JS (awaited) and print the result as JSON;
 //                           `app` is available as a global
-//   command <id>            run an Obsidian command, e.g. sample-plugin:open-modal-simple
+//   command <id>            run an Obsidian command, e.g. marp-deck:open-preview
 //   screenshot [file]       save a PNG (default: test-results/screenshots/cdp-<time>.png)
 //   reload                  copy the fresh build into the vault and re-enable the plugin,
 //                           returning after its onload() has finished
