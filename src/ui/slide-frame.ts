@@ -49,9 +49,12 @@ function escapeAttribute(value: string): string {
 		.replace(/</g, '&lt;');
 }
 
-/** The HTML or SVG link (`<a>`) an event happened in, if any. */
-function linkOf(target: EventTarget | null): Element | null {
-	return (target as Element | null)?.closest?.('a') ?? null;
+/**
+ * The link an event happened in, if any: an HTML or SVG `<a>`, or an image
+ * map's `<area>`.
+ */
+export function linkOf(target: EventTarget | null): Element | null {
+	return (target as Element | null)?.closest?.('a, area') ?? null;
 }
 
 const xlinkNamespace = 'http://www.w3.org/1999/xlink';
@@ -97,6 +100,12 @@ export class SlideFrame {
 				() => {
 					const doc = this.iframe.contentDocument;
 					if (doc) {
+						// Set as a property, never written into the HTML: the
+						// value comes from the app theme and CSS snippets.
+						doc.documentElement.style.setProperty(
+							'--marp-frame-background',
+							background,
+						);
 						this.attachListeners(doc);
 						resolve(doc);
 					}
@@ -104,7 +113,7 @@ export class SlideFrame {
 				{ once: true },
 			);
 		});
-		this.iframe.srcdoc = `<!doctype html><html class="mode-${options.mode}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${escapeAttribute(options.csp)}"><style id="marp-shell">:root { --marp-frame-background: ${background}; }${shellCss}</style><style id="marp-style"></style></head><body class="mode-${options.mode}"><div id="marp-root"></div></body></html>`;
+		this.iframe.srcdoc = `<!doctype html><html class="mode-${options.mode}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${escapeAttribute(options.csp)}"><style id="marp-shell">${shellCss}</style><style id="marp-style"></style></head><body class="mode-${options.mode}"><div id="marp-root"></div></body></html>`;
 	}
 
 	/** Resolves with the frame's document once its shell has loaded. */
