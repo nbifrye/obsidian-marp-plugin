@@ -7,6 +7,7 @@ import shikiPlugin from '@marp-team/marp-core/plugins/shiki';
 import type { HtmlMode, MathEngine } from '../settings';
 import { embedKatexFonts } from './katex-fonts';
 import { obsidianImagesPlugin, type RenderEnv } from './obsidian-images';
+import { slideLinesPlugin, type SlideLinesEnv } from './slide-lines';
 
 export interface EngineOptions {
 	math: MathEngine;
@@ -25,6 +26,8 @@ export interface RenderResult {
 	 * directives), as plain text. Never insert them as HTML.
 	 */
 	notes: string[];
+	/** The source line (0-based) each slide starts at. */
+	slideLines: number[];
 }
 
 export interface Engine {
@@ -59,7 +62,8 @@ export function createEngine(options: EngineOptions): Engine {
 		.use(katexPlugin({ fontPath: false }))
 		.use(shikiPlugin())
 		.use(mermaidPlugin())
-		.use(obsidianImagesPlugin);
+		.use(obsidianImagesPlugin)
+		.use(slideLinesPlugin);
 
 	const themeErrors: Engine['themeErrors'] = [];
 	const { themeSet } = marp;
@@ -88,12 +92,17 @@ export function createEngine(options: EngineOptions): Engine {
 	return {
 		themeErrors,
 		render(markdown, env = {}) {
-			const { html, css, comments } = marp.render(markdown, env);
+			const slideLines: number[] = [];
+			const { html, css, comments } = marp.render(markdown, {
+				...env,
+				slideLines,
+			} satisfies RenderEnv & SlideLinesEnv);
 			return {
 				html,
 				css: embedKatexFonts(css),
 				slides: comments.length,
 				notes: comments.map((c) => c.join('\n\n')),
+				slideLines,
 			};
 		},
 	};
