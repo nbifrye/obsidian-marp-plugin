@@ -12,6 +12,7 @@ function fakeApp() {
 			if (workspace.layoutReady) callback();
 			else pending.push(callback);
 		},
+		detachLeavesOfType(_type: string) {},
 	});
 	const ready = () => {
 		workspace.layoutReady = true;

@@ -5,6 +5,7 @@ import { resetVault } from './helpers';
 
 const PLUGIN_ID = 'marp-deck';
 const VIEW_TYPE = 'marp-core-slides-preview';
+const AUDIENCE_TYPE = 'marp-core-slides-audience';
 
 type PluginManager = {
 	plugins: Record<string, unknown>;
@@ -581,6 +582,81 @@ describe('Marp plugin', function () {
 		await expect(
 			browser.$('.marp-core-slides-presentation.is-presenter'),
 		).not.toExist();
+	});
+
+	it('shows the slides in an audience window on desktop', async function () {
+		const desktop = await browser.executeObsidian(
+			({ obsidian }) => obsidian.Platform.isDesktopApp,
+		);
+		const button = browser.$(
+			'.marp-core-slides-toolbar button[aria-label="Open audience window"]',
+		);
+		await browser.executeObsidianCommand(`${PLUGIN_ID}:start-presentation`);
+		const counter = browser.$('.marp-core-slides-counter');
+		await expect(counter).toHaveText('1 / 4');
+		if (!desktop) {
+			await expect(button).not.toExist();
+			return;
+		}
+
+		const audience = (body: string) =>
+			browser.execute(`
+				const leaves = app.workspace.getLeavesOfType(${JSON.stringify(AUDIENCE_TYPE)});
+				return (async (view) => { ${body} })(leaves[0]?.view);
+			`);
+		const audienceSlide = () =>
+			audience(`
+				await view.rendered;
+				return [...view.frame.document.querySelectorAll('div.marpit > svg')]
+					.findIndex((s) => getComputedStyle(s).display === 'block');
+			`) as Promise<number>;
+		const audienceCount = () =>
+			browser.executeObsidian(
+				({ app }, type) => app.workspace.getLeavesOfType(type).length,
+				AUDIENCE_TYPE,
+			);
+
+		await button.click();
+		await browser.waitUntil(async () => (await audienceCount()) === 1);
+		await expect(
+			browser.$('.marp-core-slides-presentation.is-presenter'),
+		).toExist();
+		expect(await audienceSlide()).toBe(0);
+
+		await browser
+			.$('.marp-core-slides-toolbar button[aria-label="Next slide"]')
+			.click();
+		await expect(counter).toHaveText('2 / 4');
+		expect(await audienceSlide()).toBe(1);
+
+		// Keys in the audience window move both.
+		await audience(`
+			view.frame.document.dispatchEvent(
+				new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }),
+			);
+		`);
+		await expect(counter).toHaveText('3 / 4');
+		expect(await audienceSlide()).toBe(2);
+
+		// Closing the window keeps the presentation, and it can be reopened.
+		await audience('view.leaf.detach();');
+		expect(await audienceCount()).toBe(0);
+		await expect(counter).toHaveText('3 / 4');
+		await button.click();
+		await browser.waitUntil(async () => (await audienceCount()) === 1);
+		expect(await audienceSlide()).toBe(2);
+
+		// Ending the presentation closes the window.
+		await browser
+			.$(
+				'.marp-core-slides-toolbar button[aria-label="End presentation"]',
+			)
+			.click();
+		await expect(browser.$('.marp-core-slides-presentation')).not.toExist();
+		expect(await audienceCount()).toBe(0);
+		await browser.waitUntil(
+			async () => (await browser.getWindowHandles()).length === 1,
+		);
 	});
 
 	it('opens the preview from the ribbon', async function () {

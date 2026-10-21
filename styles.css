@@ -163,6 +163,14 @@
 	}
 }
 
+/* Audience window */
+.marp-core-slides-audience.view-content {
+	position: relative;
+	padding: 0;
+	background: #000;
+	overflow: hidden;
+}
+
 /* Print */
 .marp-core-slides-print-host {
 	position: fixed;
