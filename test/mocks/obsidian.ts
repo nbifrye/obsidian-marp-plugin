@@ -24,6 +24,13 @@ export class Plugin {
 	async saveData(data: unknown): Promise<void> {
 		this.data = structuredClone(data);
 	}
+
+	register(_callback: () => unknown): void {}
+	registerEvent(_ref: unknown): void {}
+	registerView(_type: string, _factory: unknown): void {}
+	addRibbonIcon(_icon: string, _title: string, _callback: unknown): void {}
+	addCommand(_command: unknown): void {}
+	addSettingTab(_tab: unknown): void {}
 }
 
 export class PluginSettingTab {
@@ -71,6 +78,30 @@ export class TFile extends TAbstractFile {}
 export class WorkspaceLeaf {}
 export const Platform = { isMobile: false, isDesktopApp: true };
 export function setIcon() {}
+
+// Needs `window`: use it in tests with the happy-dom environment.
+export function debounce<T extends unknown[]>(
+	cb: (...args: T) => unknown,
+	timeout = 0,
+	resetTimer = false,
+) {
+	let timer: number | undefined;
+	const debounced = (...args: T) => {
+		if (timer !== undefined && !resetTimer) return debounced;
+		window.clearTimeout(timer);
+		timer = window.setTimeout(() => {
+			timer = undefined;
+			cb(...args);
+		}, timeout);
+		return debounced;
+	};
+	debounced.cancel = () => {
+		window.clearTimeout(timer);
+		timer = undefined;
+		return debounced;
+	};
+	return debounced;
+}
 
 export function normalizePath(path: string): string {
 	return path.replace(/[\\/]+/g, '/').replace(/^\/|\/$/g, '') || '/';
