@@ -11,6 +11,7 @@ import {
 	normalizeSettings,
 } from './settings';
 import { AUDIENCE_VIEW_TYPE, AudienceView } from './ui/audience-view';
+import { cursorListener } from './ui/cursor-listener';
 import { registerFileMenu } from './ui/menus';
 import { PREVIEW_VIEW_TYPE, PreviewView } from './ui/preview-view';
 
@@ -19,7 +20,10 @@ const THEME_REFRESH_DELAY = 500;
 
 export default class MarpPlugin extends Plugin {
 	settings!: MarpPluginSettings;
-	/** Triggers `refresh` when previews must render again from scratch. */
+	/**
+	 * Triggers `refresh` when previews must render again from scratch, and
+	 * `cursor-move` when the cursor of a Markdown editor moves.
+	 */
 	readonly events = new Events();
 	readonly engines = new EngineStore(this);
 
@@ -36,6 +40,9 @@ export default class MarpPlugin extends Plugin {
 		});
 		registerCommands(this);
 		registerFileMenu(this);
+		this.registerEditorExtension(
+			cursorListener(() => this.events.trigger('cursor-move')),
+		);
 		this.addSettingTab(new MarpSettingTab(this.app, this));
 
 		const refreshThemes = debounce(

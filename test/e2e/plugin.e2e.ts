@@ -275,6 +275,79 @@ async function currentSlide(): Promise<number> {
 	}, VIEW_TYPE);
 }
 
+/**
+ * Activates the editor of Slides.md and puts its cursor at the start of the
+ * line, then types `text` there, if given, as the user would.
+ */
+async function moveCursor(line: number, text = ''): Promise<void> {
+	await browser.executeObsidian(
+		async ({ app, obsidian }, line, text) => {
+			const leaf = app.workspace
+				.getLeavesOfType('markdown')
+				.find(
+					(l) =>
+						l.view instanceof obsidian.MarkdownView &&
+						l.view.file?.path === 'Slides.md',
+				);
+			if (!leaf || !(leaf.view instanceof obsidian.MarkdownView))
+				throw new Error('No editor');
+			app.workspace.setActiveLeaf(leaf);
+			// On phones, showing the tab restores its cursor afterwards.
+			await new Promise((r) => window.setTimeout(r, 300));
+			const { editor } = leaf.view;
+			// Not in the public API: the CodeMirror view, to mark the changes
+			// as made by the user (Editor.setCursor() is not).
+			const cm = (
+				editor as unknown as {
+					cm: {
+						dispatch(spec: {
+							selection?: { anchor: number };
+							changes?: { from: number; insert: string };
+							userEvent: string;
+						}): void;
+					};
+				}
+			).cm;
+			const from = editor.posToOffset({ line, ch: 0 });
+			cm.dispatch({ selection: { anchor: from }, userEvent: 'select' });
+			if (text) {
+				cm.dispatch({
+					changes: { from, insert: text },
+					selection: { anchor: from + text.length },
+					userEvent: 'input.type',
+				});
+			}
+		},
+		line,
+		text,
+	);
+}
+
+/**
+ * Shows the preview (on phones it is another tab than the editor) once the
+ * cursor and render debounces have passed, and returns the slide it keeps in
+ * view and the slide actually in view.
+ */
+async function shownSlide(): Promise<{ kept: number; visible: number }> {
+	return browser.executeObsidian(async ({ app }, type) => {
+		await new Promise((r) => window.setTimeout(r, 400));
+		const leaf = app.workspace.getLeavesOfType(type)[0]!;
+		const view = leaf.view as unknown as {
+			rendered: Promise<void>;
+			currentSlide: number;
+			frame: { visibleSlide(): number };
+		};
+		await view.rendered;
+		const { revealLeaf } = app.workspace as unknown as {
+			revealLeaf: (leaf: unknown) => unknown;
+		};
+		await revealLeaf.call(app.workspace, leaf);
+		// The preview scrolls from a ResizeObserver once it is shown again.
+		await new Promise((r) => window.setTimeout(r, 300));
+		return { kept: view.currentSlide, visible: view.frame.visibleSlide() };
+	}, VIEW_TYPE);
+}
+
 describe('Marp plugin', function () {
 	// Settings as loaded from a vault without data.json, i.e. the defaults.
 	let defaults: MarpPluginSettings;
@@ -425,6 +498,47 @@ describe('Marp plugin', function () {
 			};
 		}, VIEW_TYPE);
 		expect(state).toEqual({ kept: 2, scrolled: true });
+	});
+
+	it('shows the slide with the editor cursor', async function () {
+		const body = Array.from(
+			{ length: 12 },
+			(_, i) => `## Slide ${i + 1}\n\n\`\`\`text\n---\n\`\`\``,
+		).join('\n\n');
+		const content = deck(body, 'headingDivider: 2\n');
+		const lines = content.split('\n');
+		await writeNote('Slides.md', content);
+		await openPreview();
+		expect((await previewInfo()).slides).toBe(12);
+
+		// Inside the code block of the 7th slide.
+		await moveCursor(lines.indexOf('## Slide 7') + 3);
+		expect(await shownSlide()).toEqual({ kept: 6, visible: 6 });
+
+		// In the front matter.
+		await moveCursor(1);
+		expect(await shownSlide()).toEqual({ kept: 0, visible: 0 });
+
+		// Moving within the slide keeps the preview where it was scrolled to.
+		await scrollToSlide(4);
+		await moveCursor(lines.indexOf('## Slide 1'));
+		expect((await shownSlide()).visible).toBe(4);
+	});
+
+	it('shows a slide added while typing', async function () {
+		const content = longDeck(10);
+		await writeNote('Slides.md', content);
+		await openPreview();
+		await previewInfo();
+
+		await moveCursor(
+			content.split('\n').indexOf('# Slide 3'),
+			'# Inserted\n\n---\n\n',
+		);
+		expect(await shownSlide()).toEqual({ kept: 3, visible: 3 });
+		const info = await previewInfo();
+		expect(info.slides).toBe(11);
+		expect(info.text).toContain('Inserted');
 	});
 
 	it('follows the active note and explains non-Marp notes', async function () {

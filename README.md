@@ -8,7 +8,7 @@ Marp Deck turns any note with `marp: true` into a [Marp](https://marp.app/) slid
 
 ## Features
 
-- **Live preview** next to the note, updated as you type (unsaved changes included).
+- **Live preview** next to the note, updated as you type (unsaved changes included) and scrolled to the slide the cursor is in.
 - **Presentation mode** in a full window, with keyboard and tap navigation.
 - **Presenter view** with speaker notes, the next slide and a timer; on desktop, the slides can go to a separate window for the audience.
 - **HTML export** to a single self-contained file, and **printing** to PDF on desktop.
@@ -48,12 +48,12 @@ $e^{i\pi} + 1 = 0$
 ![[diagram.png|400]]
 ```
 
-| Command                | What it does                                                                                                 |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Open slide preview** | Opens a live preview that follows the active note, including unsaved changes.                                |
-| **Start presentation** | Shows the slides full window. Use the arrow keys, Page Up/Down, Space, Home/End, or tap the left/right half. |
-| **Export as HTML**     | Saves `<note>.html` next to the note: a single file with images, themes and fonts embedded.                  |
-| **Print slides**       | Opens the system print dialog, e.g. to save a PDF (desktop only).                                            |
+| Command                | What it does                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Open slide preview** | Opens a live preview that follows the active note, including unsaved changes, and shows the slide the cursor is in. |
+| **Start presentation** | Shows the slides full window. Use the arrow keys, Page Up/Down, Space, Home/End, or tap the left/right half.        |
+| **Export as HTML**     | Saves `<note>.html` next to the note: a single file with images, themes and fonts embedded.                         |
+| **Print slides**       | Opens the system print dialog, e.g. to save a PDF (desktop only).                                                   |
 
 ### Presenter notes and presenter view
 
