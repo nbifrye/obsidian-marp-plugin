@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Events } from 'obsidian';
 import MarpPlugin from '../../src/main';
@@ -47,6 +48,21 @@ describe('MarpPlugin theme folder watching', () => {
 		expect(refresh).not.toHaveBeenCalled();
 
 		vault.trigger('create', { path: 'Themes/d.css' });
+		await vi.runAllTimersAsync();
+		expect(refresh).toHaveBeenCalledTimes(1);
+	});
+
+	it('refreshes once for a burst of theme changes', async () => {
+		const { vault, ready, refresh } = await loadPlugin();
+		ready();
+		for (let i = 0; i < 5; i++) {
+			vault.trigger('modify', { path: 'Themes/a.css' });
+			await vi.advanceTimersByTimeAsync(50);
+		}
+		vault.trigger('rename', { path: 'Themes/b.css' }, 'Themes/c.css');
+		vault.trigger('delete', { path: 'Themes/d.css' });
+		vault.trigger('modify', { path: 'Notes/a.css' });
+		expect(refresh).not.toHaveBeenCalled();
 		await vi.runAllTimersAsync();
 		expect(refresh).toHaveBeenCalledTimes(1);
 	});

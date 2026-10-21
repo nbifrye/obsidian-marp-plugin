@@ -1,4 +1,4 @@
-import { Events, Plugin, TAbstractFile } from 'obsidian';
+import { debounce, Events, Plugin, TAbstractFile } from 'obsidian';
 import { openPreview, targetFile } from './actions';
 import { registerCommands } from './commands';
 import { buildCsp } from './render/csp';
@@ -12,6 +12,9 @@ import {
 } from './settings';
 import { registerFileMenu } from './ui/menus';
 import { PREVIEW_VIEW_TYPE, PreviewView } from './ui/preview-view';
+
+/** Waits for a burst of theme file changes (e.g. saves) to settle. */
+const THEME_REFRESH_DELAY = 500;
 
 export default class MarpPlugin extends Plugin {
 	settings!: MarpPluginSettings;
@@ -33,13 +36,19 @@ export default class MarpPlugin extends Plugin {
 		registerFileMenu(this);
 		this.addSettingTab(new MarpSettingTab(this.app, this));
 
+		const refreshThemes = debounce(
+			() => this.refresh(),
+			THEME_REFRESH_DELAY,
+			true,
+		);
+		this.register(() => refreshThemes.cancel());
 		const onThemeChange = (file: TAbstractFile, oldPath?: string) => {
 			const folder = this.settings.themeFolder;
 			if (
 				isThemeFile(file.path, folder) ||
 				(oldPath !== undefined && isThemeFile(oldPath, folder))
 			) {
-				this.refresh();
+				refreshThemes();
 			}
 		};
 		// The vault load triggers 'create' for every existing file before the

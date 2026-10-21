@@ -79,6 +79,30 @@ export class WorkspaceLeaf {}
 export const Platform = { isMobile: false, isDesktopApp: true };
 export function setIcon() {}
 
+// Needs `window`: use it in tests with the happy-dom environment.
+export function debounce<T extends unknown[]>(
+	cb: (...args: T) => unknown,
+	timeout = 0,
+	resetTimer = false,
+) {
+	let timer: number | undefined;
+	const debounced = (...args: T) => {
+		if (timer !== undefined && !resetTimer) return debounced;
+		window.clearTimeout(timer);
+		timer = window.setTimeout(() => {
+			timer = undefined;
+			cb(...args);
+		}, timeout);
+		return debounced;
+	};
+	debounced.cancel = () => {
+		window.clearTimeout(timer);
+		timer = undefined;
+		return debounced;
+	};
+	return debounced;
+}
+
 export function normalizePath(path: string): string {
 	return path.replace(/[\\/]+/g, '/').replace(/^\/|\/$/g, '') || '/';
 }
