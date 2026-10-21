@@ -1,6 +1,8 @@
-import { App, Modal, TFile, setIcon } from 'obsidian';
+import { App, Modal, Platform, TFile, setIcon } from 'obsidian';
 import type { RenderResult } from '../render/engine';
+import { AudienceView, openAudienceWindow } from './audience-view';
 import { openSlideLink } from './links';
+import { PresenterPanel } from './presenter-panel';
 import { SlideFrame } from './slide-frame';
 
 const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'];
@@ -9,12 +11,20 @@ const previousKeys = ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'];
 /**
  * Full-window presentation showing one slide at a time. Keyboard, buttons
  * and tapping the left or right half of the slide move between slides.
+ *
+ * The presenter view adds the notes, the next slide and the elapsed time
+ * beside the slide. On desktop, the slides can also be shown in a separate
+ * audience window, which this modal keeps in sync.
  */
 export class PresentationModal extends Modal {
 	private frame: SlideFrame | null = null;
 	private counterEl!: HTMLElement;
 	index: number;
 	private total: number;
+	private readonly started = Date.now();
+	private presenter: PresenterPanel | null = null;
+	audience: AudienceView | null = null;
+	private openingAudience = false;
 
 	constructor(
 		app: App,
@@ -40,15 +50,8 @@ export class PresentationModal extends Modal {
 		this.frame = new SlideFrame(stage, {
 			mode: 'present',
 			csp: this.csp,
-			onLink: (href) =>
-				openSlideLink(this.app, href, this.file.path, (i) =>
-					this.go(i),
-				),
-			onClick: (event) => {
-				const width = event.view?.innerWidth ?? window.innerWidth;
-				if (event.clientX < width / 2) this.previous();
-				else this.next();
-			},
+			onLink: (href) => this.openLink(href),
+			onClick: (event) => this.handleClick(event),
 			onKeyDown: (event) => this.handleKey(event),
 		});
 
@@ -62,6 +65,17 @@ export class PresentationModal extends Modal {
 			cls: 'marp-core-slides-counter',
 		});
 		this.button(toolbar, 'chevron-right', 'Next slide', () => this.next());
+		this.button(toolbar, 'sticky-note', 'Toggle presenter view', () =>
+			this.setPresenterView(!this.presenter),
+		);
+		if (Platform.isDesktopApp) {
+			this.button(
+				toolbar,
+				'monitor',
+				'Open audience window',
+				() => void this.openAudience(),
+			);
+		}
 		if (activeDocument.fullscreenEnabled) {
 			this.button(toolbar, 'maximize', 'Toggle full screen', () =>
 				this.toggleFullscreen(),
@@ -85,6 +99,10 @@ export class PresentationModal extends Modal {
 	onClose(): void {
 		if (activeDocument.fullscreenElement)
 			void activeDocument.exitFullscreen();
+		this.setPresenterView(false);
+		const audience = this.audience;
+		this.audience = null;
+		audience?.leaf.detach();
 		this.frame?.destroy();
 		this.frame = null;
 		this.contentEl.empty();
@@ -102,6 +120,16 @@ export class PresentationModal extends Modal {
 		});
 		setIcon(button, icon);
 		button.addEventListener('click', onClick);
+	}
+
+	private openLink(href: string): void {
+		openSlideLink(this.app, href, this.file.path, (i) => this.go(i));
+	}
+
+	private handleClick(event: MouseEvent): void {
+		const width = event.view?.innerWidth ?? window.innerWidth;
+		if (event.clientX < width / 2) this.previous();
+		else this.next();
 	}
 
 	private handleKey(event: KeyboardEvent): void {
@@ -127,6 +155,62 @@ export class PresentationModal extends Modal {
 		this.index = Math.max(0, Math.min(index, this.total - 1));
 		this.frame?.setActiveSlide(this.index);
 		this.counterEl.setText(`${this.index + 1} / ${this.total}`);
+		this.presenter?.show(this.index);
+		this.audience?.setActiveSlide(this.index);
+	}
+
+	/** Shows or hides the notes, next slide and timer beside the slide. */
+	setPresenterView(on: boolean): void {
+		if (on === !!this.presenter) return;
+		this.modalEl.toggleClass('is-presenter', on);
+		if (!on) {
+			this.presenter?.unload();
+			this.presenter = null;
+			return;
+		}
+		this.presenter = new PresenterPanel(this.contentEl, {
+			result: this.result,
+			resolveMedia: this.resolveMedia,
+			csp: this.csp,
+			started: this.started,
+			onKeyDown: (event) => this.handleKey(event),
+		});
+		this.presenter.load();
+		this.presenter.show(this.index);
+	}
+
+	/**
+	 * Shows the slides in a new window for the audience and switches this
+	 * modal to the presenter view.
+	 */
+	async openAudience(): Promise<void> {
+		if (this.audience || this.openingAudience) return;
+		this.openingAudience = true;
+		const view = await openAudienceWindow(this.app).finally(() => {
+			this.openingAudience = false;
+		});
+		if (!view) return;
+		// Closed while the window was opening.
+		if (!this.frame) {
+			view.leaf.detach();
+			return;
+		}
+		this.audience = view;
+		view.present(
+			{
+				result: this.result,
+				resolveMedia: this.resolveMedia,
+				csp: this.csp,
+				onLink: (href) => this.openLink(href),
+				onClick: (event) => this.handleClick(event),
+				onKeyDown: (event) => this.handleKey(event),
+				onClose: () => {
+					if (this.audience === view) this.audience = null;
+				},
+			},
+			this.index,
+		);
+		this.setPresenterView(true);
 	}
 
 	private toggleFullscreen(): void {

@@ -10,6 +10,7 @@ import {
 	MarpSettingTab,
 	normalizeSettings,
 } from './settings';
+import { AUDIENCE_VIEW_TYPE, AudienceView } from './ui/audience-view';
 import { registerFileMenu } from './ui/menus';
 import { PREVIEW_VIEW_TYPE, PreviewView } from './ui/preview-view';
 
@@ -29,6 +30,7 @@ export default class MarpPlugin extends Plugin {
 			PREVIEW_VIEW_TYPE,
 			(leaf) => new PreviewView(leaf, this),
 		);
+		this.registerView(AUDIENCE_VIEW_TYPE, (leaf) => new AudienceView(leaf));
 		this.addRibbonIcon('presentation', 'Open slide preview', () => {
 			void openPreview(this, targetFile(this));
 		});
@@ -54,6 +56,8 @@ export default class MarpPlugin extends Plugin {
 		// The vault load triggers 'create' for every existing file before the
 		// layout is ready; the engine reads the theme folder when first used.
 		this.app.workspace.onLayoutReady(() => {
+			// Audience windows restored with the layout have no presentation.
+			this.app.workspace.detachLeavesOfType(AUDIENCE_VIEW_TYPE);
 			this.registerEvent(
 				this.app.vault.on('create', (f) => onThemeChange(f)),
 			);

@@ -72,6 +72,14 @@ export class Events {
 	}
 }
 
+export class Component {
+	load(): void {}
+	unload(): void {}
+	registerInterval(id: number): number {
+		return id;
+	}
+}
+
 export class ItemView {}
 export class TAbstractFile {}
 export class TFile extends TAbstractFile {}
