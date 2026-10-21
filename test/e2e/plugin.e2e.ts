@@ -409,6 +409,15 @@ describe('Marp plugin', function () {
 		expect(info.message).toContain('marp: true');
 	});
 
+	it('stops showing the slides of a deleted note', async function () {
+		await openPreview();
+		expect((await previewInfo()).message).toBe('');
+		await obsidianPage.delete('Slides.md');
+		const info = await previewInfo();
+		expect(info.file).toBe(null);
+		expect(info.message).toContain('marp: true');
+	});
+
 	it('presents one slide at a time and navigates', async function () {
 		await browser.executeObsidianCommand(`${PLUGIN_ID}:start-presentation`);
 		const counter = browser.$('.marp-core-slides-counter');

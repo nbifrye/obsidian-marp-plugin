@@ -109,6 +109,7 @@ export class PreviewView extends ItemView {
 				if (file === this.file) {
 					this.file = null;
 					this.refreshTitle();
+					this.schedule();
 				}
 				this.onFileChange(file);
 			}),
