@@ -7,6 +7,7 @@ import {
 	startPresentation,
 	targetFile,
 } from './actions';
+import { isMarpNote } from './render/note';
 
 export function registerCommands(plugin: MarpPlugin): void {
 	plugin.addCommand({
@@ -20,7 +21,7 @@ export function registerCommands(plugin: MarpPlugin): void {
 		name: 'Start presentation',
 		checkCallback: (checking) => {
 			const file = targetFile(plugin);
-			if (!file) return false;
+			if (!file || !isMarpNote(plugin.app, file)) return false;
 			if (!checking) void startPresentation(plugin, file);
 			return true;
 		},
@@ -31,7 +32,7 @@ export function registerCommands(plugin: MarpPlugin): void {
 		name: 'Export as HTML',
 		checkCallback: (checking) => {
 			const file = targetFile(plugin);
-			if (!file) return false;
+			if (!file || !isMarpNote(plugin.app, file)) return false;
 			if (!checking) void exportHtml(plugin, file);
 			return true;
 		},
@@ -42,7 +43,12 @@ export function registerCommands(plugin: MarpPlugin): void {
 		name: 'Print slides',
 		checkCallback: (checking) => {
 			const file = targetFile(plugin);
-			if (!file || !Platform.isDesktopApp) return false;
+			if (
+				!file ||
+				!Platform.isDesktopApp ||
+				!isMarpNote(plugin.app, file)
+			)
+				return false;
 			if (!checking) void printNote(plugin, file);
 			return true;
 		},

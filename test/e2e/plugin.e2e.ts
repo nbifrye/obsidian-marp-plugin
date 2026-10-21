@@ -203,6 +203,32 @@ async function menuItems(
 	);
 }
 
+type CommandManager = {
+	commands: Record<
+		string,
+		{
+			callback?: () => unknown;
+			checkCallback?: (checking: boolean) => boolean;
+		}
+	>;
+};
+
+/** IDs of this plugin's commands the command palette offers right now. */
+async function availableCommands(): Promise<string[]> {
+	return browser.executeObsidian(({ app }, id) => {
+		const { commands } = (app as unknown as { commands: CommandManager })
+			.commands;
+		return Object.entries(commands)
+			.filter(
+				([key, command]) =>
+					key.startsWith(`${id}:`) &&
+					(command.checkCallback?.(true) ?? true),
+			)
+			.map(([key]) => key.slice(id.length + 1))
+			.sort();
+	}, PLUGIN_ID);
+}
+
 async function setSettings(values: Partial<MarpPluginSettings>): Promise<void> {
 	await browser.executeObsidian(async ({ plugins }, values) => {
 		Object.assign(plugins.marpDeck.settings, values);
@@ -537,6 +563,52 @@ describe('Marp plugin', function () {
 		await expect(browser.$('.marp-core-slides-counter')).toHaveText(
 			'5 / 10',
 		);
+	});
+
+	it('offers the slide commands only for Marp notes', async function () {
+		const desktop = await browser.executeObsidian(
+			({ obsidian }) => obsidian.Platform.isDesktopApp,
+		);
+		const slideCommands = [
+			'export-html',
+			'open-preview',
+			...(desktop ? ['print'] : []),
+			'start-presentation',
+		];
+		expect(await availableCommands()).toEqual(slideCommands);
+
+		await openNote('Welcome.md');
+		expect(await availableCommands()).toEqual(['open-preview']);
+
+		// Typed but not yet saved, so the metadata cache does not know it yet.
+		const cachedAsMarp = await browser.executeObsidian(
+			({ app, obsidian }) => {
+				const view = app.workspace.getActiveViewOfType(
+					obsidian.MarkdownView,
+				)!;
+				view.editor.setValue(`---\nmarp: true\n---\n\n# Hello\n`);
+				return (
+					app.metadataCache.getFileCache(view.file!)?.frontmatter
+						?.marp === true
+				);
+			},
+		);
+		expect(cachedAsMarp).toBe(false);
+		expect(await availableCommands()).toEqual(slideCommands);
+	});
+
+	it('offers the slide commands from a preview whose note is closed', async function () {
+		await openPreview();
+		await previewInfo();
+		await browser.executeObsidian(({ app, obsidian }, type) => {
+			app.workspace.getLeavesOfType('markdown')[0]?.detach();
+			const preview = app.workspace.getLeavesOfType(type)[0]!;
+			app.workspace.setActiveLeaf(preview, { focus: true });
+			if (app.workspace.getActiveViewOfType(obsidian.MarkdownView)) {
+				throw new Error('A note is still active');
+			}
+		}, VIEW_TYPE);
+		expect(await availableCommands()).toContain('start-presentation');
 	});
 
 	it('exports a self-contained HTML file', async function () {
