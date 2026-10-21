@@ -117,7 +117,7 @@ Verify every behavior change yourself with the layers below; never ask the user 
 
 ### Platform coverage
 
-- CI (`.github/workflows/e2e.yml`): desktop on Linux, macOS and Windows for the latest version and 1.0.3, each with desktop and mobile-emulated UI; the Android app on an emulator.
+- CI (`.github/workflows/e2e.yml`): desktop on Linux, macOS and Windows for the latest version and 1.0.3 (on Windows Server 2022, as 1.0.3 crashes on newer Windows images), each with desktop and mobile-emulated UI; the Android app on an emulator.
 - iOS is not covered automatically: Obsidian's iOS app is only distributed through the App Store and cannot be installed in the iOS Simulator. Mobile emulation and Android cover the shared mobile code paths (`Platform.isMobile`, no Node/Electron APIs), but not iOS-only branches (`Platform.isIosApp`) or WebKit rendering. Mobile emulation still runs in Electron, so only Android proves the absence of Node/Electron APIs. Checking on a physical iOS device (Safari Web Inspector) requires the user.
 
 ### Manual install

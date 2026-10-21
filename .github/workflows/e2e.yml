@@ -20,6 +20,15 @@ jobs:
                 # app/installer pairs; see test/wdio.base.mts. 1.0.3 is the oldest
                 # version wdio-obsidian-service can run, and the minAppVersion.
                 obsidian: ['latest/latest', '1.0.3/earliest']
+                # Obsidian 1.0.3 (Electron 18) crashes while rendering slides on
+                # the windows-2025 image 20261018 and later, whatever the
+                # Chromium flags; Windows Server 2022 still runs it.
+                exclude:
+                    - os: windows-latest
+                      obsidian: '1.0.3/earliest'
+                include:
+                    - os: windows-2022
+                      obsidian: '1.0.3/earliest'
         runs-on: ${{ matrix.os }}
         defaults:
             run:
