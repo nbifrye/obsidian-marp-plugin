@@ -24,6 +24,13 @@ export class Plugin {
 	async saveData(data: unknown): Promise<void> {
 		this.data = structuredClone(data);
 	}
+
+	register(_callback: () => unknown): void {}
+	registerEvent(_ref: unknown): void {}
+	registerView(_type: string, _factory: unknown): void {}
+	addRibbonIcon(_icon: string, _title: string, _callback: unknown): void {}
+	addCommand(_command: unknown): void {}
+	addSettingTab(_tab: unknown): void {}
 }
 
 export class PluginSettingTab {

@@ -42,16 +42,20 @@ export default class MarpPlugin extends Plugin {
 				this.refresh();
 			}
 		};
-		this.registerEvent(
-			this.app.vault.on('create', (f) => onThemeChange(f)),
-		);
-		this.registerEvent(
-			this.app.vault.on('modify', (f) => onThemeChange(f)),
-		);
-		this.registerEvent(
-			this.app.vault.on('delete', (f) => onThemeChange(f)),
-		);
-		this.registerEvent(this.app.vault.on('rename', onThemeChange));
+		// The vault load triggers 'create' for every existing file before the
+		// layout is ready; the engine reads the theme folder when first used.
+		this.app.workspace.onLayoutReady(() => {
+			this.registerEvent(
+				this.app.vault.on('create', (f) => onThemeChange(f)),
+			);
+			this.registerEvent(
+				this.app.vault.on('modify', (f) => onThemeChange(f)),
+			);
+			this.registerEvent(
+				this.app.vault.on('delete', (f) => onThemeChange(f)),
+			);
+			this.registerEvent(this.app.vault.on('rename', onThemeChange));
+		});
 	}
 
 	async loadSettings() {
