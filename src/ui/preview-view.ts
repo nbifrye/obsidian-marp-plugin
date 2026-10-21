@@ -1,4 +1,5 @@
 import {
+	debounce,
 	ItemView,
 	MarkdownView,
 	Menu,
@@ -12,6 +13,7 @@ import type MarpPlugin from '../main';
 import { isMarpDocument } from '../render/frontmatter';
 import { imageExtensions } from '../render/obsidian-images';
 import { previewResolvers, readNoteSource } from '../render/note';
+import { slideAtLine } from '../render/slide-lines';
 import { openSlideLink } from './links';
 import { addSlideMenuItems } from './menus';
 import { SlideFrame } from './slide-frame';
@@ -19,6 +21,8 @@ import { SlideFrame } from './slide-frame';
 export const PREVIEW_VIEW_TYPE = 'marp-core-slides-preview';
 
 const RENDER_DELAY = 250;
+/** Waits for the cursor to rest, e.g. while a key is held down. */
+const CURSOR_DELAY = 100;
 
 interface PreviewState extends Record<string, unknown> {
 	file?: string;
@@ -26,7 +30,8 @@ interface PreviewState extends Record<string, unknown> {
 
 /**
  * Live preview of the Markdown note that was last active. Follows unsaved
- * editor changes, file switches and changes to images and themes.
+ * editor changes, file switches, changes to images and themes, and the slide
+ * the editor cursor is in.
  */
 export class PreviewView extends ItemView {
 	private readonly plugin: MarpPlugin;
@@ -41,6 +46,18 @@ export class PreviewView extends ItemView {
 	private currentSlide = 0;
 	/** Whether the frame shows this file's slides, so its scroll position counts. */
 	private positionKnown = false;
+	/** The source line each shown slide starts at. */
+	private slideLines: number[] = [];
+	/** Slide of the editor cursor that was last scrolled to. */
+	private cursorSlide: number | null = null;
+	/**
+	 * Whether to scroll to `currentSlide` once the frame is shown again: it
+	 * cannot scroll while hidden, e.g. in a background tab on phones.
+	 */
+	private scrollOnShow = false;
+	/** Renders requested, and the last one whose slides are shown. */
+	private requested = 0;
+	private shownRequest = 0;
 	/** Resolves when the latest render has finished (for tests). */
 	rendered: Promise<void> = Promise.resolve();
 
@@ -123,7 +140,28 @@ export class PreviewView extends ItemView {
 		this.registerEvent(
 			this.plugin.events.on('refresh', () => this.recreateFrame()),
 		);
+		const followCursor = debounce(
+			() => this.followCursor(),
+			CURSOR_DELAY,
+			true,
+		);
+		this.register(() => followCursor.cancel());
+		this.registerEvent(
+			this.plugin.events.on('cursor-move', () => followCursor()),
+		);
 		this.register(() => window.clearTimeout(this.timer));
+		const observer = new ResizeObserver(() => {
+			if (
+				this.scrollOnShow &&
+				this.positionKnown &&
+				this.frameEl.isShown()
+			) {
+				this.scrollOnShow = false;
+				this.frame?.scrollToSlide(this.currentSlide);
+			}
+		});
+		observer.observe(this.frameEl);
+		this.register(() => observer.disconnect());
 
 		if (!this.file) this.follow(workspace.getMostRecentLeaf());
 		this.recreateFrame();
@@ -185,6 +223,7 @@ export class PreviewView extends ItemView {
 		this.file = file;
 		this.currentSlide = 0;
 		this.positionKnown = false;
+		this.cursorSlide = null;
 		this.refreshTitle();
 		this.schedule(0);
 	}
@@ -214,9 +253,7 @@ export class PreviewView extends ItemView {
 	/** Rebuilds the frame (e.g. for a new CSP) and renders again. */
 	private recreateFrame(): void {
 		if (!this.frameEl) return;
-		if (this.frame && this.positionKnown) {
-			this.currentSlide = this.frame.visibleSlide();
-		}
+		this.readPosition();
 		this.positionKnown = false;
 		this.frame?.destroy();
 		this.frame = new SlideFrame(this.frameEl, {
@@ -231,6 +268,7 @@ export class PreviewView extends ItemView {
 	}
 
 	schedule(delay = RENDER_DELAY): void {
+		this.requested++;
 		window.clearTimeout(this.timer);
 		this.timer = window.setTimeout(() => {
 			this.rendered = this.render();
@@ -244,7 +282,48 @@ export class PreviewView extends ItemView {
 		this.frameEl.toggle(text === null);
 	}
 
+	/**
+	 * Scrolls to the slide the active editor's cursor is in, if that editor
+	 * shows this file and the cursor moved to another slide since the last
+	 * time. Within a slide, the preview stays where it was scrolled to.
+	 */
+	private followCursor(): void {
+		const { file, frame } = this;
+		// Until the latest changes are shown, the slides' lines may not match
+		// the editor's; the render calls this again.
+		if (
+			!file ||
+			!frame ||
+			!this.positionKnown ||
+			this.shownRequest !== this.requested
+		) {
+			return;
+		}
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (view?.file !== file) return;
+		const slide = slideAtLine(
+			this.slideLines,
+			view.editor.getCursor().line,
+		);
+		if (slide === this.cursorSlide) return;
+		this.cursorSlide = slide;
+		this.currentSlide = slide;
+		if (this.frameEl.isShown()) frame.scrollToSlide(slide);
+		else this.scrollOnShow = true;
+	}
+
+	/**
+	 * Keeps the slide in view across re-renders. A hidden frame has no layout
+	 * to read it from, so the last known slide stays.
+	 */
+	private readPosition(): void {
+		if (this.frame && this.positionKnown && this.frameEl.isShown()) {
+			this.currentSlide = this.frame.visibleSlide();
+		}
+	}
+
 	private async render(): Promise<void> {
+		const request = this.requested;
 		const generation = ++this.generation;
 		const stale = () => generation !== this.generation;
 		const { file, frame } = this;
@@ -268,7 +347,7 @@ export class PreviewView extends ItemView {
 			const engine = await this.plugin.engines.get();
 			if (stale()) return;
 
-			if (this.positionKnown) this.currentSlide = frame.visibleSlide();
+			this.readPosition();
 			const { env, resolveMedia } = previewResolvers(this.app, file.path);
 			const result = engine.render(source, env);
 			await frame.show(result, resolveMedia);
@@ -280,6 +359,9 @@ export class PreviewView extends ItemView {
 			);
 			frame.scrollToSlide(this.currentSlide);
 			this.positionKnown = true;
+			this.slideLines = result.slideLines;
+			this.shownRequest = request;
+			this.followCursor();
 		} catch (e) {
 			if (stale()) return;
 			console.error(e);

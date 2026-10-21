@@ -28,6 +28,7 @@ export class Plugin {
 	register(_callback: () => unknown): void {}
 	registerEvent(_ref: unknown): void {}
 	registerView(_type: string, _factory: unknown): void {}
+	registerEditorExtension(_extension: unknown): void {}
 	addRibbonIcon(_icon: string, _title: string, _callback: unknown): void {}
 	addCommand(_command: unknown): void {}
 	addSettingTab(_tab: unknown): void {}
