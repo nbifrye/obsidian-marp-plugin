@@ -10,6 +10,7 @@ Marp Deck turns any note with `marp: true` into a [Marp](https://marp.app/) slid
 
 - **Live preview** next to the note, updated as you type (unsaved changes included).
 - **Presentation mode** in a full window, with keyboard and tap navigation.
+- **Presenter view** with speaker notes, the next slide and a timer.
 - **HTML export** to a single self-contained file, and **printing** to PDF on desktop.
 - **Math** with MathJax or KaTeX, **syntax highlighting** with Shiki, and **Mermaid diagrams** — all built in, no setup.
 - **Obsidian-style images** (`![[image.png|300]]`) and **custom themes** from a vault folder.
@@ -53,6 +54,18 @@ $e^{i\pi} + 1 = 0$
 | **Start presentation** | Shows the slides full window. Use the arrow keys, Page Up/Down, Space, Home/End, or tap the left/right half. |
 | **Export as HTML**     | Saves `<note>.html` next to the note: a single file with images, themes and fonts embedded.                  |
 | **Print slides**       | Opens the system print dialog, e.g. to save a PDF (desktop only).                                            |
+
+### Presenter notes and presenter view
+
+HTML comments in a slide are its presenter notes, as in Marp (directives such as `<!-- _class: lead -->` are not):
+
+```markdown
+# First slide
+
+<!-- Greet everyone and introduce the topic. -->
+```
+
+During a presentation, select **Toggle presenter view** in the toolbar to show the current slide's notes, the next slide and the elapsed time beside the slide. Notes are shown as plain text: HTML and Markdown in them are not rendered. On small or portrait screens, the notes appear below the slide and the next slide is hidden.
 
 The **Open slide preview** icon in the ribbon opens the preview too, and the buttons in the preview's header start the presentation or export HTML.
 

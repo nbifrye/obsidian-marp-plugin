@@ -81,6 +81,88 @@
 	font-variant-numeric: tabular-nums;
 }
 
+/* Presenter view */
+.marp-core-slides-presentation.is-presenter .modal-content {
+	display: grid;
+	grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+	gap: var(--size-4-3);
+	padding: var(--size-4-3);
+	padding-bottom: calc(var(--size-4-3) + env(safe-area-inset-bottom, 0px));
+	box-sizing: border-box;
+	color: #ddd;
+}
+
+.marp-core-slides-presentation.is-presenter .marp-core-slides-stage {
+	position: relative;
+	inset: auto;
+	min-height: 0;
+}
+
+.marp-core-slides-presenter {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-3);
+	min-height: 0;
+	/* Room for the toolbar. */
+	padding-bottom: var(--size-4-12);
+}
+
+.marp-core-slides-timer {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	font-size: var(--font-ui-large);
+	font-variant-numeric: tabular-nums;
+}
+
+.marp-core-slides-timer .clickable-icon {
+	color: inherit;
+}
+
+.marp-core-slides-next {
+	position: relative;
+	flex: 0 0 auto;
+	aspect-ratio: 16 / 9;
+	max-height: 40%;
+}
+
+.marp-core-slides-next-end {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid #444;
+	color: #999;
+}
+
+.marp-core-slides-notes {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	font-size: var(--font-ui-medium);
+	line-height: 1.5;
+	user-select: text;
+}
+
+.marp-core-slides-notes.is-empty {
+	color: #999;
+}
+
+/* Small or portrait screens: the notes below the slide, no next slide. */
+@media (max-width: 700px), (max-aspect-ratio: 1/1) {
+	.marp-core-slides-presentation.is-presenter .modal-content {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+	}
+
+	.marp-core-slides-presenter .marp-core-slides-next {
+		display: none;
+	}
+}
+
 /* Print */
 .marp-core-slides-print-host {
 	position: fixed;

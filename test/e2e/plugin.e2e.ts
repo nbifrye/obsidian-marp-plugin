@@ -503,6 +503,86 @@ describe('Marp plugin', function () {
 		await expect(browser.$('.marp-core-slides-presentation')).not.toExist();
 	});
 
+	it('shows the notes, next slide and timer in the presenter view', async function () {
+		await writeNote(
+			'Slides.md',
+			deck(
+				'# One\n\n<!-- First note\n<b>not bold</b> -->\n<!-- _class: lead -->\n\n---\n\n# Two\n\n---\n\n# Three\n\n<!-- Last note -->',
+			),
+		);
+		await browser.executeObsidianCommand(`${PLUGIN_ID}:start-presentation`);
+		const counter = browser.$('.marp-core-slides-counter');
+		await expect(counter).toHaveText('1 / 3');
+		const toggle = browser.$(
+			'.marp-core-slides-toolbar button[aria-label="Toggle presenter view"]',
+		);
+		await expect(toggle.$('svg')).toExist();
+		await toggle.click();
+		await expect(
+			browser.$('.marp-core-slides-presentation.is-presenter'),
+		).toExist();
+
+		const presenter = () =>
+			browser.executeObsidian(async () => {
+				const panel = document.querySelector(
+					'.marp-core-slides-presenter',
+				)!;
+				const notes = panel.querySelector<HTMLElement>(
+					'.marp-core-slides-notes',
+				)!;
+				const next = panel.querySelector<HTMLIFrameElement>('iframe')!;
+				const end = panel.querySelector<HTMLElement>(
+					'.marp-core-slides-next-end',
+				)!;
+				await new Promise((r) => window.setTimeout(r, 100));
+				const slides = [
+					...(next.contentDocument?.querySelectorAll(
+						'div.marpit > svg',
+					) ?? []),
+				];
+				return {
+					notes: notes.textContent,
+					empty: notes.classList.contains('is-empty'),
+					elements: notes.children.length,
+					next: slides.findIndex((s) =>
+						s.classList.contains('marp-active'),
+					),
+					end: end.style.display !== 'none',
+					elapsed: panel.querySelector('.marp-core-slides-elapsed')
+						?.textContent,
+				};
+			});
+
+		expect(await presenter()).toEqual({
+			notes: 'First note\n<b>not bold</b>',
+			empty: false,
+			elements: 0,
+			next: 1,
+			end: false,
+			elapsed: expect.stringMatching(/^\d{2}:\d{2}$/),
+		});
+		await browser.keys('ArrowRight');
+		await expect(counter).toHaveText('2 / 3');
+		expect(await presenter()).toMatchObject({
+			notes: 'No notes for this slide.',
+			empty: true,
+			next: 2,
+			end: false,
+		});
+		await browser.keys('End');
+		await expect(counter).toHaveText('3 / 3');
+		expect(await presenter()).toMatchObject({
+			notes: 'Last note',
+			end: true,
+		});
+
+		await toggle.click();
+		await expect(browser.$('.marp-core-slides-presenter')).not.toExist();
+		await expect(
+			browser.$('.marp-core-slides-presentation.is-presenter'),
+		).not.toExist();
+	});
+
 	it('opens the preview from the ribbon', async function () {
 		expect(await ribbonAction('Open slide preview', true)).toBe(1);
 		expect((await previewInfo()).file).toBe('Slides.md');
