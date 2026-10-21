@@ -6,6 +6,7 @@ import {
 	startPresentation,
 } from '../actions';
 import type MarpPlugin from '../main';
+import { isMarpNote } from '../render/note';
 
 /** Options for the presentation, export and print items. */
 export interface SlideMenuOptions {
@@ -58,13 +59,6 @@ export function addSlideMenuItems(
 	}
 }
 
-/** Whether the metadata cache marks `file` as a Marp slide deck. */
-function isMarpFile(plugin: MarpPlugin, file: TFile): boolean {
-	const frontmatter =
-		plugin.app.metadataCache.getFileCache(file)?.frontmatter;
-	return file.extension === 'md' && frontmatter?.marp === true;
-}
-
 /**
  * Adds the slide actions to the file menu of Marp notes: the file explorer's
  * context menu, the note's "More options" menu and its tab header menu.
@@ -72,7 +66,7 @@ function isMarpFile(plugin: MarpPlugin, file: TFile): boolean {
 export function registerFileMenu(plugin: MarpPlugin): void {
 	plugin.registerEvent(
 		plugin.app.workspace.on('file-menu', (menu, file) => {
-			if (file instanceof TFile && isMarpFile(plugin, file)) {
+			if (file instanceof TFile && isMarpNote(plugin.app, file)) {
 				addSlideMenuItems(menu, plugin, file);
 			}
 		}),
