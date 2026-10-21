@@ -12,6 +12,15 @@ describe('engine', () => {
 		expect(result.html.match(/<section/g)).toHaveLength(2);
 	});
 
+	it('returns the HTML comments of each slide as notes', () => {
+		const { notes } = createEngine(base).render(
+			doc(
+				'# A\n\n<!-- First -->\n<!-- _class: lead -->\n<!--\nSecond <b>&amp;</b>\n-->\n\n---\n\n# B',
+			),
+		);
+		expect(notes).toEqual(['First\n\nSecond <b>&amp;</b>', '']);
+	});
+
 	it('typesets math with MathJax by default', () => {
 		const { html } = createEngine(base).render(doc('$$\n\\int x\n$$'));
 		expect(html).toContain('mjx-container');

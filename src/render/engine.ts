@@ -20,6 +20,11 @@ export interface RenderResult {
 	css: string;
 	/** Number of slides. */
 	slides: number;
+	/**
+	 * Presenter notes per slide: the slide's HTML comments (other than
+	 * directives), as plain text. Never insert them as HTML.
+	 */
+	notes: string[];
 }
 
 export interface Engine {
@@ -84,7 +89,12 @@ export function createEngine(options: EngineOptions): Engine {
 		themeErrors,
 		render(markdown, env = {}) {
 			const { html, css, comments } = marp.render(markdown, env);
-			return { html, css: embedKatexFonts(css), slides: comments.length };
+			return {
+				html,
+				css: embedKatexFonts(css),
+				slides: comments.length,
+				notes: comments.map((c) => c.join('\n\n')),
+			};
 		},
 	};
 }
