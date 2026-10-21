@@ -31,6 +31,11 @@ export async function openPreview(
 			: workspace.getLeaf('split', 'vertical');
 		await leaf.setViewState({ type: PREVIEW_VIEW_TYPE, active: false });
 	}
+	// Background tabs restored on 1.7.2+ hold a placeholder view until shown.
+	const { loadIfDeferred } = leaf as unknown as {
+		loadIfDeferred?: () => Promise<void>;
+	};
+	await loadIfDeferred?.call(leaf);
 	const view = leaf.view;
 	if (!(view instanceof PreviewView)) return null;
 	if (file) view.setFile(file);

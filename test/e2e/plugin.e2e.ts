@@ -418,6 +418,31 @@ describe('Marp plugin', function () {
 		expect(info.message).toContain('marp: true');
 	});
 
+	it('opens a preview restored in a background tab', async function () {
+		const deferred = await browser.executeObsidian(
+			async ({ app }, type) => {
+				const note = app.workspace.getMostRecentLeaf()!;
+				const preview = app.workspace.getLeaf('tab');
+				await preview.setViewState({ type, active: false });
+				app.workspace.setActiveLeaf(note, { focus: true });
+				// Restores the layout like a restart, which makes background tabs
+				// deferred views on 1.7.2+.
+				await app.workspace.changeLayout(app.workspace.getLayout());
+				const leaf = app.workspace.getLeavesOfType(
+					type,
+				)[0] as unknown as { isDeferred?: boolean } | undefined;
+				return leaf?.isDeferred;
+			},
+			VIEW_TYPE,
+		);
+		// undefined before 1.7.2, which has no deferred views.
+		expect(deferred).not.toBe(false);
+		await openPreview();
+		const info = await previewInfo();
+		expect(info.file).toBe('Slides.md');
+		expect(info.slides).toBeGreaterThan(0);
+	});
+
 	it('presents one slide at a time and navigates', async function () {
 		await browser.executeObsidianCommand(`${PLUGIN_ID}:start-presentation`);
 		const counter = browser.$('.marp-core-slides-counter');
