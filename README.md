@@ -125,7 +125,9 @@ The sample vault also has [Hot Reload](https://github.com/pjeby/hot-reload) inst
 
 ### Releasing
 
-Releases are built by `.github/workflows/release.yml` when a tag is pushed. Tags have no leading `v`.
+Releases are built by `.github/workflows/release.yml` when a tag is pushed or when the workflow is run by hand. Tags have no leading `v`.
+
+- **By hand**: in **Actions → Release Obsidian plugin → Run workflow**, pick the branch and enter the version. A stable version (`0.3.0`) is committed to that branch as a bump of `manifest.json`, `versions.json` and `package.json`, then tagged; a pre-release version (`0.3.0-beta.1`) only tags the branch's latest commit. The release is then created as described below. From the command line: `gh workflow run release.yml -f version=0.3.0`.
 
 - **Beta** (for BRAT): tag any commit with a pre-release version, e.g. `git tag 0.2.0-beta.1 && git push origin 0.2.0-beta.1`. A pre-release is published right away; the `manifest.json` attached to it has the tag's version, so the committed one stays unchanged.
 - **Stable**: run `npm version <x.y.z>` (updates `manifest.json` and `versions.json`), push the commit and tag, then publish the draft release the workflow creates.
