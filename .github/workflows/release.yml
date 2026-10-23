@@ -5,18 +5,91 @@ name: Release Obsidian plugin
 # A tag `x.y.z-<pre>` (e.g. `0.2.0-beta.1`) publishes a pre-release right away
 # so BRAT (https://tfthacker.com/BRAT) users can install it. The manifest.json
 # attached to it carries the tag's version; the committed one is not changed.
+# Running the workflow by hand (Actions → Run workflow) does the tagging for
+# you: for a stable version it first commits the bump of manifest.json,
+# versions.json and package.json to the selected branch, then tags and releases
+# it; a pre-release version only tags the branch's latest commit.
 
 on:
     push:
         tags:
             - '*'
+    workflow_dispatch:
+        inputs:
+            version:
+                description: 'Version to release, e.g. 1.2.3 or 1.2.3-beta.1 (no leading v)'
+                required: true
+                type: string
+
+concurrency:
+    group: release
+    cancel-in-progress: false
 
 # Third-party code (npm packages) runs only in the build job, which cannot
 # write to the repository; the publish job only uploads what it built.
 permissions: {}
 
 jobs:
+    # Manual runs only. Runs no npm packages, so it may push to the repository.
+    # Tags pushed with GITHUB_TOKEN do not start another run, so the jobs below
+    # build the new tag in this run.
+    tag:
+        if: github.event_name == 'workflow_dispatch'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        outputs:
+            name: ${{ steps.push.outputs.name }}
+        steps:
+            - name: Check version
+              env:
+                  VERSION: ${{ inputs.version }}
+              run: |
+                  if ! [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$ ]]; then
+                    echo "::error::Version '$VERSION' is not like 1.2.3 or 1.2.3-beta.1 (no leading v)."
+                    exit 1
+                  fi
+                  if [ "$GITHUB_REF_TYPE" != branch ]; then
+                    echo "::error::Run the workflow from a branch, not from '$GITHUB_REF'."
+                    exit 1
+                  fi
+
+            - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+            - name: Check tag does not exist
+              env:
+                  VERSION: ${{ inputs.version }}
+              run: |
+                  if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" > /dev/null; then
+                    echo "::error::Tag '$VERSION' already exists."
+                    exit 1
+                  fi
+
+            - name: Bump version
+              if: ${{ !contains(inputs.version, '-') }}
+              env:
+                  VERSION: ${{ inputs.version }}
+              run: |
+                  git config user.name 'github-actions[bot]'
+                  git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+                  # Runs the `version` script (version-bump.mjs), which needs no dependencies.
+                  npm version "$VERSION" --no-git-tag-version
+                  git add package.json package-lock.json manifest.json versions.json
+                  git commit -m "$VERSION をリリースするためバージョンを上げる"
+
+            - name: Push tag
+              id: push
+              env:
+                  VERSION: ${{ inputs.version }}
+              run: |
+                  git tag "$VERSION"
+                  git push --atomic origin "HEAD:refs/heads/$GITHUB_REF_NAME" "refs/tags/$VERSION"
+                  echo "name=$VERSION" >> "$GITHUB_OUTPUT"
+
     build:
+        needs: tag
+        # `tag` is skipped for tag pushes.
+        if: ${{ !cancelled() && (needs.tag.result == 'success' || needs.tag.result == 'skipped') }}
         runs-on: ubuntu-latest
         permissions:
             contents: read
@@ -26,12 +99,15 @@ jobs:
         steps:
             - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
               with:
+                  ref: ${{ needs.tag.outputs.name && format('refs/tags/{0}', needs.tag.outputs.name) || github.ref }}
                   persist-credentials: false
 
             - name: Check tag
               id: tag
+              env:
+                  DISPATCHED_TAG: ${{ needs.tag.outputs.name }}
               run: |
-                  tag="${GITHUB_REF#refs/tags/}"
+                  tag="${DISPATCHED_TAG:-${GITHUB_REF#refs/tags/}}"
                   if ! [[ "$tag" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$ ]]; then
                     echo "::error::Tag '$tag' is not a version like 1.2.3 or 1.2.3-beta.1 (no leading v)."
                     exit 1
@@ -82,6 +158,8 @@ jobs:
 
     publish:
         needs: build
+        # A skipped `tag` would otherwise skip this job too.
+        if: ${{ !cancelled() && needs.build.result == 'success' }}
         runs-on: ubuntu-latest
         permissions:
             contents: write
